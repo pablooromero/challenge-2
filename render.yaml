@@ -1,0 +1,54 @@
+services:
+  - type: web
+    name: fadua-bi-assistant
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.14
+      - key: APP_ENV
+        value: production
+      - key: APP_HOST
+        value: 0.0.0.0
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: OPENAI_TIMEOUT_SECONDS
+        value: "20"
+      - key: OPENAI_MAX_RETRIES
+        value: "2"
+      - key: OPENAI_RETRY_BACKOFF_SECONDS
+        value: "0.75"
+      - key: MYSQL_HOST
+        value: 193.203.175.134
+      - key: MYSQL_PORT
+        value: "3306"
+      - key: MYSQL_DB
+        value: u420581741_pruebas
+      - key: MYSQL_USER
+        value: u420581741_pruebas
+      - key: MYSQL_TABLE
+        value: metricas_campanas_ventas
+      - key: MYSQL_CONNECT_TIMEOUT
+        value: "10"
+      - key: MYSQL_READ_TIMEOUT
+        value: "10"
+      - key: MYSQL_WRITE_TIMEOUT
+        value: "10"
+      - key: LANGFUSE_HOST
+        value: https://us.cloud.langfuse.com
+      - key: LANGFUSE_PROMPT_LABEL
+        value: production
+      - key: LANGFUSE_PROMPT_CACHE_TTL_SECONDS
+        value: "300"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: MYSQL_PASSWORD
+        sync: false
+      - key: LANGFUSE_PUBLIC_KEY
+        sync: false
+      - key: LANGFUSE_SECRET_KEY
+        sync: false
