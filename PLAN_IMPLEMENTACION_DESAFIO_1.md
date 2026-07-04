@@ -330,42 +330,42 @@ Definir el grafo del agente, su estado, sus nodos y su flujo de control.
 
 ### Tareas
 
-- [ ] Crear `graph/state.py`.
-- [ ] Definir schema del estado del agente.
-- [ ] Crear `graph/nodes.py`.
-- [ ] Crear `graph/builder.py`.
-- [ ] Implementar nodo `normalize_input`.
-- [ ] Implementar nodo `classify_intent_and_entities`.
-- [ ] Implementar nodo `resolve_context`.
-- [ ] Implementar nodo `plan_tools`.
-- [ ] Implementar nodo `execute_tools`.
-- [ ] Implementar nodo `compose_answer`.
-- [ ] Implementar nodo `build_chart_payload`.
-- [ ] Implementar nodo `error_handler`.
-- [ ] Conectar edges del flujo principal.
-- [ ] Compilar el grafo.
-- [ ] Integrar checkpointer para memoria corta por `thread_id`.
+- [x] Crear `graph/state.py`.
+- [x] Definir schema del estado del agente.
+- [x] Crear `graph/nodes.py`.
+- [x] Crear `graph/builder.py`.
+- [x] Implementar nodo `normalize_input`.
+- [x] Implementar nodo `classify_intent_and_entities`.
+- [x] Implementar nodo `resolve_context`.
+- [x] Implementar nodo `plan_tools`.
+- [x] Implementar nodo `execute_tools`.
+- [x] Implementar nodo `compose_answer`.
+- [x] Implementar nodo `build_chart_payload`.
+- [x] Implementar nodo `error_handler`.
+- [x] Conectar edges del flujo principal.
+- [x] Compilar el grafo.
+- [x] Integrar checkpointer para memoria corta por `thread_id`.
 
 ### Buenas practicas LangGraph
 
-- [ ] Mantener nodos con una responsabilidad clara.
-- [ ] Evitar nodos gigantes con demasiada logica.
-- [ ] Usar estado explicito y tipado.
-- [ ] Diseñar rutas de error y fallback.
-- [ ] Preparar el grafo para seguirse facilmente en trazas.
-- [ ] No depender solo de prompt para controlar el comportamiento.
+- [x] Mantener nodos con una responsabilidad clara.
+- [x] Evitar nodos gigantes con demasiada logica.
+- [x] Usar estado explicito y tipado.
+- [x] Diseñar rutas de error y fallback.
+- [x] Preparar el grafo para seguirse facilmente en trazas.
+- [x] No depender solo de prompt para controlar el comportamiento.
 
 ### Guardrails de flujo
 
-- [ ] El nodo de clasificacion no debe ejecutar tools.
-- [ ] El nodo de planificacion no debe inventar herramientas inexistentes.
-- [ ] El nodo de ejecucion solo puede llamar tools permitidas.
-- [ ] El nodo de respuesta solo debe sintetizar resultados reales.
+- [x] El nodo de clasificacion no debe ejecutar tools.
+- [x] El nodo de planificacion no debe inventar herramientas inexistentes.
+- [x] El nodo de ejecucion solo puede llamar tools permitidas.
+- [x] El nodo de respuesta solo debe sintetizar resultados reales.
 
 ### Entregables
 
-- [ ] Grafo base funcionando end-to-end.
-- [ ] El backend ya puede pasar de pregunta a respuesta mediante LangGraph.
+- [x] Grafo base funcionando end-to-end.
+- [x] El backend ya puede pasar de pregunta a respuesta mediante LangGraph.
 
 ---
 
@@ -749,7 +749,7 @@ Para reducir riesgo, conviene seguir este orden:
 - [x] Fase 2 - MySQL y acceso a datos
 - [x] Fase 3 - Tools analiticas
 - [x] Fase 4 - Forecast
-- [ ] Fase 5 - Grafo LangGraph
+- [x] Fase 5 - Grafo LangGraph
 - [ ] Fase 6 - Integracion LLM
 - [ ] Fase 7 - Prompt management Langfuse
 - [ ] Fase 8 - Observabilidad Langfuse
