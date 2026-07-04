@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FADUA BI Assistant</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Challenge 1</p>
+        <h1>FADUA BI Assistant</h1>
+        <p class="hero-copy">
+          Base web lista para evolucionar hacia un asistente analitico con LangGraph,
+          OpenAI, Langfuse y consultas reales a MySQL.
+        </p>
+      </section>
+
+      <section class="panel">
+        <header class="panel-header">
+          <div>
+            <p class="panel-label">Chat</p>
+            <h2>Interfaz inicial</h2>
+          </div>
+          <span class="status-pill">Mock activo</span>
+        </header>
+
+        <div id="messages" class="messages" aria-live="polite">
+          <article class="message assistant">
+            <p>
+              La base del frontend ya esta conectada con FastAPI. En la siguiente fase
+              vamos a reemplazar el mock por respuestas calculadas desde MySQL.
+            </p>
+          </article>
+        </div>
+
+        <form id="chat-form" class="composer">
+          <label class="sr-only" for="message">Tu consulta</label>
+          <textarea
+            id="message"
+            name="message"
+            rows="3"
+            maxlength="2000"
+            placeholder="Ejemplo: Cual fue el mes de mayores ventas?"
+            required
+          ></textarea>
+          <div class="composer-footer">
+            <div class="helper-text">
+              Se mantiene un `thread_id` local para preparar memoria conversacional.
+            </div>
+            <button type="submit">Enviar</button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
