@@ -23,4 +23,5 @@ def normalize_input(state: AssistantState) -> dict[str, Any]:
         "normalized_question": normalized,
         "warnings": [],
         "error": None,
+        "thread_id": state.get("thread_id"),
     }

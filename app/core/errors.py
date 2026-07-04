@@ -57,6 +57,24 @@ class AnalyticsValidationError(AppError):
         )
 
 
+class LLMConfigurationError(AppError):
+    def __init__(self, message: str = "LLM configuration is incomplete.") -> None:
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="llm_configuration_error",
+        )
+
+
+class LLMInvocationError(AppError):
+    def __init__(self, message: str = "LLM request failed.") -> None:
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code="llm_invocation_error",
+        )
+
+
 async def app_error_handler(_: Request, exc: AppError) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,

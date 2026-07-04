@@ -1,6 +1,9 @@
 from typing import Any, Literal
 
+from langchain_core.messages import AIMessage, HumanMessage
+
 from app.agent.graph.state import AssistantIntent, AssistantState
+from app.agent.llm import classify_question_with_llm
 
 
 def extract_metric(question: str) -> str | None:
@@ -28,8 +31,43 @@ def extract_metric(question: str) -> str | None:
     return None
 
 
+def recent_conversation(state: AssistantState) -> list[dict[str, str]]:
+    conversation: list[dict[str, str]] = []
+    for message in state.get("messages", []):
+        if isinstance(message, HumanMessage):
+            conversation.append({"role": "user", "content": message.content})
+        elif isinstance(message, AIMessage) and message.content:
+            conversation.append({"role": "assistant", "content": str(message.content)})
+    return conversation
+
+
 def classify_intent_and_entities(state: AssistantState) -> dict[str, Any]:
     question = state.get("normalized_question", "")
+    warnings = list(state.get("warnings", []))
+
+    llm_result, llm_warnings, llm_model = classify_question_with_llm(
+        question=question,
+        conversation=recent_conversation(state),
+        last_metric=state.get("last_metric"),
+        last_intent=state.get("last_intent"),
+        thread_id=state.get("thread_id"),
+    )
+    warnings.extend(llm_warnings)
+
+    if llm_result is not None:
+        return {
+            "intent": llm_result.intent,
+            "metric": llm_result.metric,
+            "rank_direction": llm_result.rank_direction,
+            "low_metric": llm_result.low_metric,
+            "high_metric": llm_result.high_metric,
+            "group_by": llm_result.group_by,
+            "sort_by": llm_result.sort_by,
+            "classification_source": "openai",
+            "llm_model": llm_model,
+            "warnings": warnings,
+        }
+
     metric = extract_metric(question)
     intent: AssistantIntent = "basic_kpi"
     rank_direction: Literal["max", "min"] | None = None
@@ -73,6 +111,8 @@ def classify_intent_and_entities(state: AssistantState) -> dict[str, Any]:
         "high_metric": high_metric,
         "group_by": group_by,
         "sort_by": sort_by,
+        "classification_source": "rules",
+        "warnings": warnings,
     }
 
 

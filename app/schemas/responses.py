@@ -34,6 +34,7 @@ class ChatMeta(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     last_data_date: str | None = None
     source: str = "mock"
+    model: str | None = None
 
 
 class ChatResponse(BaseModel):

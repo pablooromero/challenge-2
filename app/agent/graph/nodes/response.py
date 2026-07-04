@@ -4,6 +4,7 @@ from typing import Any
 from langchain_core.messages import AIMessage, ToolMessage
 
 from app.agent.graph.state import AssistantState
+from app.agent.llm import compose_answer_with_llm
 
 
 def latest_tool_result(state: AssistantState) -> dict[str, Any] | None:
@@ -11,6 +12,8 @@ def latest_tool_result(state: AssistantState) -> dict[str, Any] | None:
         if isinstance(message, ToolMessage):
             content = message.content
             if isinstance(content, str):
+                if content.startswith("Error:"):
+                    return {"tool_error": content.splitlines()[0]}
                 try:
                     return json.loads(content)
                 except json.JSONDecodeError:
@@ -35,12 +38,16 @@ def metric_label(metric: str) -> str:
     return labels.get(metric, metric)
 
 
-def compose_answer(state: AssistantState) -> dict[str, Any]:
+def build_deterministic_answer(state: AssistantState) -> dict[str, Any]:
     intent = state.get("intent", "basic_kpi")
     metric = state.get("metric") or "total_sales"
     tool_result = latest_tool_result(state)
     if tool_result is None:
         return {"error": "No se pudo recuperar el resultado de la herramienta analitica."}
+    if "tool_error" in tool_result:
+        return {"error": "No pude consultar la capa de datos en este momento."}
+    if "meta" not in tool_result:
+        return {"error": "La herramienta analitica devolvio un formato inesperado."}
 
     meta = tool_result.get("meta", {})
     warnings = list(meta.get("warnings", []))
@@ -74,8 +81,8 @@ def compose_answer(state: AssistantState) -> dict[str, Any]:
         else:
             answer = (
                 f"El mejor candidato es {row['period']}: tuvo {row['total_leads']} leads y "
-                f"{row['total_sales']} ventas. Quedo rankeado #{tool_result['low_metric_rank']} en "
-                f"{metric_label(tool_result['low_metric'])} y #{tool_result['high_metric_rank']} en "
+                f"{row['total_sales']} ventas. Fue el #{tool_result['low_metric_rank']} mas bajo en "
+                f"{metric_label(tool_result['low_metric'])} y el #{tool_result['high_metric_rank']} mas alto en "
                 f"{metric_label(tool_result['high_metric'])}."
             )
             last_metric = tool_result["high_metric"]
@@ -121,6 +128,35 @@ def compose_answer(state: AssistantState) -> dict[str, Any]:
         "answer": answer,
         "last_metric": last_metric,
         "last_intent": last_intent,
+    }
+
+
+def compose_answer(state: AssistantState) -> dict[str, Any]:
+    deterministic_payload = build_deterministic_answer(state)
+    if deterministic_payload.get("error"):
+        return deterministic_payload
+
+    warnings = list(deterministic_payload["warnings"])
+    answer = deterministic_payload["answer"]
+    llm_answer, llm_warnings, llm_model = compose_answer_with_llm(
+        question=state.get("normalized_question", ""),
+        intent=state.get("intent", "basic_kpi"),
+        fallback_answer=answer,
+        tool_result=deterministic_payload["tool_result"],
+        warnings=warnings,
+        thread_id=state.get("thread_id"),
+    )
+    warnings.extend(llm_warnings)
+
+    if llm_answer is not None:
+        answer = llm_answer
+
+    return {
+        **deterministic_payload,
+        "warnings": warnings,
+        "answer": answer,
+        "response_source": "openai" if llm_answer is not None else "rules",
+        "llm_model": llm_model or state.get("llm_model"),
         "messages": [AIMessage(content=answer)],
     }
 

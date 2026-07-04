@@ -10,7 +10,7 @@ def run_assistant(message: str, thread_id: str | None) -> ChatResponse:
     resolved_thread_id = thread_id or f"thread-{uuid4().hex[:12]}"
     graph = get_assistant_graph()
     result = graph.invoke(
-        {"messages": [HumanMessage(content=message)]},
+        {"messages": [HumanMessage(content=message)], "thread_id": resolved_thread_id},
         {"configurable": {"thread_id": resolved_thread_id}},
     )
 
@@ -30,6 +30,11 @@ def run_assistant(message: str, thread_id: str | None) -> ChatResponse:
             thread_id=resolved_thread_id,
             warnings=result.get("warnings", []),
             last_data_date=data_range_payload.get("to") if isinstance(data_range_payload, dict) else None,
-            source="langgraph",
+            source=(
+                f"langgraph-{result.get('response_source') or result.get('classification_source')}"
+                if result.get("response_source") or result.get("classification_source")
+                else "langgraph"
+            ),
+            model=result.get("llm_model"),
         ),
     )

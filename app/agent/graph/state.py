@@ -17,6 +17,7 @@ AssistantIntent = Literal[
 
 
 class AssistantState(TypedDict, total=False):
+    thread_id: str | None
     messages: Annotated[list[AnyMessage], add_messages]
     normalized_question: str
     intent: AssistantIntent
@@ -35,3 +36,6 @@ class AssistantState(TypedDict, total=False):
     error: str | None
     last_metric: str | None
     last_intent: AssistantIntent | None
+    classification_source: str | None
+    response_source: str | None
+    llm_model: str | None

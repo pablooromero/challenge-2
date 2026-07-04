@@ -34,9 +34,9 @@ Antes de ejecutar cualquier fase, estas reglas guian toda la implementacion:
 - [x] Mantener el frontend libre de secretos.
 - [x] Centralizar configuracion en variables de entorno.
 - [x] Usar el backend como unico punto de acceso a MySQL y al proveedor LLM.
-- [ ] Tratar el LLM como capa de interpretacion y redaccion, no como motor de calculo principal.
+- [x] Tratar el LLM como capa de interpretacion y redaccion, no como motor de calculo principal.
 - [x] Implementar tools tipadas y auditables en lugar de SQL libre generado sin control.
-- [ ] Diseñar el agente con flujos controlados, no con autonomia ilimitada.
+- [x] Diseñar el agente con flujos controlados, no con autonomia ilimitada.
 - [ ] Instrumentar observabilidad desde el inicio para no agregarla tarde.
 - [ ] Mantener prompts versionados y desacoplados del codigo mediante Langfuse.
 - [x] Diseñar degradacion elegante ante fallos de BD, LLM u observabilidad.
@@ -384,36 +384,36 @@ Integrar el modelo de lenguaje con foco en clasificacion, extraccion y redaccion
 
 ### Tareas
 
-- [ ] Crear modulo `services/llm.py`.
-- [ ] Configurar cliente del proveedor LLM.
-- [ ] Definir estrategia de modelo para:
+- [x] Crear modulo LLM del agente.
+- [x] Configurar cliente del proveedor LLM.
+- [x] Definir estrategia de modelo para:
   - clasificacion
   - respuesta final
-- [ ] Implementar salida estructurada para clasificacion de intent.
-- [ ] Implementar validacion del output del modelo.
-- [ ] Configurar temperatura baja.
-- [ ] Limitar longitud y ambiguedad de la respuesta.
-- [ ] Definir formato comun de mensajes del agente.
+- [x] Implementar salida estructurada para clasificacion de intent.
+- [x] Implementar validacion del output del modelo.
+- [x] Configurar temperatura baja.
+- [x] Limitar longitud y ambiguedad de la respuesta.
+- [x] Definir formato comun de mensajes del agente.
 
 ### Buenas practicas LLM
 
-- [ ] Usar prompts orientados a datos y no a creatividad.
-- [ ] Pedir estructuras claras, no texto libre cuando se necesite control.
-- [ ] Validar outputs antes de usarlos.
-- [ ] Preparar fallback si el modelo devuelve algo invalido.
-- [ ] Mantener trazabilidad del modelo y parametros usados.
+- [x] Usar prompts orientados a datos y no a creatividad.
+- [x] Pedir estructuras claras, no texto libre cuando se necesite control.
+- [x] Validar outputs antes de usarlos.
+- [x] Preparar fallback si el modelo devuelve algo invalido.
+- [x] Mantener trazabilidad del modelo y parametros usados.
 
 ### Guardrails
 
-- [ ] El LLM no decide metricas fuera del dominio.
-- [ ] El LLM no accede directamente a secretos ni a la base.
-- [ ] El LLM no ejecuta SQL libre como camino por defecto.
-- [ ] El LLM no responde con numeros no respaldados por tools.
+- [x] El LLM no decide metricas fuera del dominio.
+- [x] El LLM no accede directamente a secretos ni a la base.
+- [x] El LLM no ejecuta SQL libre como camino por defecto.
+- [x] El LLM no responde con numeros no respaldados por tools.
 
 ### Entregables
 
-- [ ] Clasificacion y redaccion funcionando con proveedor real.
-- [ ] Salidas estructuradas validadas.
+- [x] Clasificacion y redaccion funcionando con proveedor real.
+- [x] Salidas estructuradas validadas.
 
 ---
 
