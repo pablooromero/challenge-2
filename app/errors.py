@@ -48,6 +48,15 @@ class DatabaseQueryError(AppError):
         )
 
 
+class AnalyticsValidationError(AppError):
+    def __init__(self, message: str = "Analytics input is invalid.") -> None:
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code="analytics_validation_error",
+        )
+
+
 async def app_error_handler(_: Request, exc: AppError) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,

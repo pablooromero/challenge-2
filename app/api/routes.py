@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.schemas.analytics import KpiToolResult
 from app.schemas.requests import ChatRequest
 from app.schemas.responses import ChatResponse, CoverageResponse, HealthResponse, KpiResponse
 from app.services.analytics import get_basic_kpis
@@ -22,8 +23,8 @@ async def get_coverage() -> CoverageResponse:
 
 @router.get("/kpis", response_model=KpiResponse)
 async def get_kpis() -> KpiResponse:
-    summary = get_basic_kpis()
-    return KpiResponse(status="ok", summary=summary)
+    result: KpiToolResult = get_basic_kpis()
+    return KpiResponse(status="ok", summary=result.summary)
 
 
 @router.post("/chat", response_model=ChatResponse)

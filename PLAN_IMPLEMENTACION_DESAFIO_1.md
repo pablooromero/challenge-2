@@ -230,20 +230,20 @@ Crear las herramientas analiticas que seran la base real de las respuestas del a
 
 ### Tareas
 
-- [ ] Implementar `get_basic_kpis`.
-- [ ] Implementar `get_monthly_aggregates`.
-- [ ] Implementar `get_channel_breakdown`.
-- [ ] Implementar `get_vehicle_breakdown`.
-- [ ] Implementar `find_best_or_worst_period`.
-- [ ] Implementar `find_relational_pattern`.
-- [ ] Crear helpers para calculos derivados:
+- [x] Implementar `get_basic_kpis`.
+- [x] Implementar `get_monthly_aggregates`.
+- [x] Implementar `get_channel_breakdown`.
+- [x] Implementar `get_vehicle_breakdown`.
+- [x] Implementar `find_best_or_worst_period`.
+- [x] Implementar `find_relational_pattern`.
+- [x] Crear helpers para calculos derivados:
   - `ctr`
   - `cpl`
   - `cpa`
   - `roas`
   - `conversion_rate`
-- [ ] Estandarizar el formato de salida de todas las tools.
-- [ ] Agregar metadata util:
+- [x] Estandarizar el formato de salida de todas las tools.
+- [x] Agregar metadata util:
   - periodo
   - filtros aplicados
   - advertencias
@@ -251,22 +251,22 @@ Crear las herramientas analiticas que seran la base real de las respuestas del a
 
 ### Buenas practicas de tools
 
-- [ ] Hacer tools pequenas, enfocadas y tipadas.
-- [ ] Evitar herramientas demasiado genericas.
-- [ ] No mezclar redaccion de respuesta con calculo analitico.
-- [ ] Devolver datos estructurados y faciles de testear.
-- [ ] Documentar supuestos de cada tool.
+- [x] Hacer tools pequenas, enfocadas y tipadas.
+- [x] Evitar herramientas demasiado genericas.
+- [x] No mezclar redaccion de respuesta con calculo analitico.
+- [x] Devolver datos estructurados y faciles de testear.
+- [x] Documentar supuestos de cada tool.
 
 ### Manejo de errores
 
-- [ ] Si no hay datos, devolver respuesta controlada, no excepcion generica.
-- [ ] Si una consulta da valores nulos o inesperados, reportarlo como warning.
-- [ ] Validar rangos temporales antes de ejecutar.
+- [x] Si no hay datos, devolver respuesta controlada, no excepcion generica.
+- [x] Si una consulta da valores nulos o inesperados, reportarlo como warning.
+- [x] Validar rangos temporales antes de ejecutar.
 
 ### Entregables
 
-- [ ] Tools analiticas listas para ser llamadas por LangGraph.
-- [ ] Casos basicos del challenge resolubles sin LLM.
+- [x] Tools analiticas listas para ser llamadas por LangGraph.
+- [x] Casos basicos del challenge resolubles sin LLM.
 
 ---
 
@@ -747,7 +747,7 @@ Para reducir riesgo, conviene seguir este orden:
 - [x] Fase 0 - Preparacion inicial
 - [x] Fase 1 - FastAPI y base web
 - [x] Fase 2 - MySQL y acceso a datos
-- [ ] Fase 3 - Tools analiticas
+- [x] Fase 3 - Tools analiticas
 - [ ] Fase 4 - Forecast
 - [ ] Fase 5 - Grafo LangGraph
 - [ ] Fase 6 - Integracion LLM
