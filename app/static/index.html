@@ -4,57 +4,106 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FADUA BI Assistant</title>
-    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   </head>
   <body>
-    <main class="shell">
-      <section class="hero">
-        <p class="eyebrow">Challenge 1</p>
-        <h1>FADUA BI Assistant</h1>
-        <p class="hero-copy">
-          Base web lista para evolucionar hacia un asistente analitico con LangGraph,
-          OpenAI, Langfuse y consultas reales a MySQL.
-        </p>
-      </section>
-
-      <section class="panel">
-        <header class="panel-header">
-          <div>
-            <p class="panel-label">Chat</p>
-            <h2>Interfaz inicial</h2>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-inner">
+          <div class="brand-block">
+            <div class="brand-mark">F</div>
+            <div>
+              <p class="sidebar-label">Challenge 1</p>
+              <h1>FADUA BI Assistant</h1>
+            </div>
           </div>
-          <span class="status-pill">Mock activo</span>
+
+          <p class="sidebar-copy">
+            Asistente analitico conectado a MySQL, LangGraph, OpenAI y Langfuse.
+          </p>
+
+          <div class="sidebar-actions">
+            <button id="new-chat-button" class="sidebar-button sidebar-button-primary" type="button">
+              Nueva conversación
+            </button>
+            <a class="sidebar-button" href="/api/health" target="_blank" rel="noreferrer">
+              Ver healthcheck
+            </a>
+          </div>
+
+          <section class="sidebar-section">
+            <div class="sidebar-section-header">
+              <p class="sidebar-label">Consultas sugeridas</p>
+            </div>
+            <div id="suggestions" class="suggestions"></div>
+          </section>
+
+          <section class="sidebar-section sidebar-footnote">
+            <p>
+              El chat conserva un <code>thread_id</code> local para memoria corta y devuelve
+              metadata util para la demo.
+            </p>
+          </section>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="topbar-label">Analytical Chat</p>
+            <h2>Conversación con contexto, metadata y gráficos</h2>
+          </div>
+          <div class="topbar-badges">
+            <span id="connection-badge" class="badge">Listo</span>
+            <span id="thread-badge" class="badge badge-muted">Sin sesión</span>
+          </div>
         </header>
 
-        <div id="messages" class="messages" aria-live="polite">
-          <article class="message assistant">
-            <p>
-              La base del frontend ya esta conectada con FastAPI. En la siguiente fase
-              vamos a reemplazar el mock por respuestas calculadas desde MySQL.
+        <section id="messages" class="messages" aria-live="polite">
+          <div id="empty-state" class="empty-state">
+            <div class="empty-orb"></div>
+            <p class="empty-label">BI Assistant</p>
+            <h3>Preguntá por ventas, leads, canales, vehículos o proyecciones.</h3>
+            <p class="empty-copy">
+              Podés empezar con una métrica básica o pedir análisis temporal, relacional
+              y forecast del próximo mes.
             </p>
-          </article>
-        </div>
-
-        <form id="chat-form" class="composer">
-          <label class="sr-only" for="message">Tu consulta</label>
-          <textarea
-            id="message"
-            name="message"
-            rows="3"
-            maxlength="2000"
-            placeholder="Ejemplo: Cual fue el mes de mayores ventas?"
-            required
-          ></textarea>
-          <div class="composer-footer">
-            <div class="helper-text">
-              Se mantiene un `thread_id` local para preparar memoria conversacional.
-            </div>
-            <button type="submit">Enviar</button>
+            <div id="empty-suggestions" class="empty-suggestions"></div>
           </div>
-        </form>
-      </section>
-    </main>
+        </section>
 
-    <script src="/static/app.js"></script>
+        <footer class="composer-dock">
+          <form id="chat-form" class="composer">
+            <label class="sr-only" for="message">Tu consulta</label>
+            <div class="composer-panel">
+              <textarea
+                id="message"
+                name="message"
+                rows="1"
+                maxlength="1000"
+                placeholder="Preguntá por métricas, rankings, comparaciones o proyecciones..."
+                required
+              ></textarea>
+              <div class="composer-row">
+                <div class="composer-meta">
+                  <span>Enter para enviar</span>
+                  <span>Shift + Enter para salto de línea</span>
+                </div>
+                <button id="submit-button" class="send-button" type="submit" aria-label="Enviar">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M7 11.5L18.5 4.8a.8.8 0 0 1 1.17.92l-3.02 12.32a.8.8 0 0 1-1.42.25l-2.93-4.1-4.2-2.02a.8.8 0 0 1-.1-1.45Z"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </form>
+        </footer>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
   </body>
 </html>

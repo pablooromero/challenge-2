@@ -29,12 +29,30 @@ class ChartPayload(BaseModel):
     datasets: list[ChartDataset] = Field(default_factory=list)
 
 
+class PromptMeta(BaseModel):
+    name: str
+    version: int
+    label: str | None = None
+    source: str
+
+
+class DecisionMeta(BaseModel):
+    classification_source: str | None = None
+    classification_reason: str | None = None
+    planning_reason: str | None = None
+    error_reason: str | None = None
+
+
 class ChatMeta(BaseModel):
     thread_id: str
     warnings: list[str] = Field(default_factory=list)
     last_data_date: str | None = None
     source: str = "mock"
     model: str | None = None
+    trace_id: str | None = None
+    trace_url: str | None = None
+    prompts: list[PromptMeta] = Field(default_factory=list)
+    decisions: DecisionMeta | None = None
 
 
 class ChatResponse(BaseModel):

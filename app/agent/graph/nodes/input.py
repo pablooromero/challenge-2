@@ -3,6 +3,7 @@ from typing import Any
 from langchain_core.messages import HumanMessage
 
 from app.agent.graph.state import AssistantState
+from app.observability import observation_context, update_current_span
 
 
 def latest_human_message(state: AssistantState) -> str:
@@ -17,11 +18,26 @@ def normalize_text(text: str) -> str:
 
 
 def normalize_input(state: AssistantState) -> dict[str, Any]:
-    question = latest_human_message(state)
-    normalized = normalize_text(question)
-    return {
-        "normalized_question": normalized,
-        "warnings": [],
-        "error": None,
-        "thread_id": state.get("thread_id"),
-    }
+    with observation_context(
+        "assistant.node.normalize_input",
+        as_type="agent",
+        input={"thread_id": state.get("thread_id")},
+    ):
+        question = latest_human_message(state)
+        normalized = normalize_text(question)
+        update_current_span(
+            output={"message_length": len(question), "normalized_length": len(normalized)},
+        )
+        return {
+            "normalized_question": normalized,
+            "warnings": [],
+            "error": None,
+            "error_reason": None,
+            "error_details": {},
+            "classification_reason": None,
+            "classification_details": {},
+            "planning_reason": None,
+            "planning_details": {},
+            "thread_id": state.get("thread_id"),
+            "prompt_versions": {},
+        }

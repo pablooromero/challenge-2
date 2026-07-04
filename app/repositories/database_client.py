@@ -13,6 +13,7 @@ from app.core.errors import (
     DatabaseConnectionError,
     DatabaseQueryError,
 )
+from app.observability import observation_context, update_current_span
 
 logger = logging.getLogger(__name__)
 
@@ -70,39 +71,76 @@ class DatabaseClient:
             conn.close()
 
     def ping(self) -> None:
-        with self.connection() as conn:
-            try:
-                with conn.cursor() as cursor:
-                    cursor.execute("SELECT 1 AS ok")
-                    cursor.fetchone()
-            except Exception as exc:
-                logger.exception("Database ping failed.")
-                raise DatabaseConnectionError() from exc
+        with observation_context("mysql.ping", as_type="retriever", input={"table": self.table}):
+            with self.connection() as conn:
+                try:
+                    with conn.cursor() as cursor:
+                        cursor.execute("SELECT 1 AS ok")
+                        cursor.fetchone()
+                    update_current_span(output={"status": "ok"})
+                except Exception as exc:
+                    logger.exception("Database ping failed.")
+                    update_current_span(output={"status": "error"}, level="ERROR", status_message="ping_failed")
+                    raise DatabaseConnectionError() from exc
 
-    def fetch_one(self, query: str, params: tuple[Any, ...] | None = None) -> dict[str, Any]:
-        logger.info("Executing query", extra={"query_name": "fetch_one"})
-        with self.connection() as conn:
-            try:
-                with conn.cursor() as cursor:
-                    cursor.execute(query, params or ())
-                    row = cursor.fetchone()
-                    return row or {}
-            except Exception as exc:
-                logger.exception("Database query failed.")
-                raise DatabaseQueryError() from exc
+    def fetch_one(
+        self,
+        query: str,
+        params: tuple[Any, ...] | None = None,
+        *,
+        query_name: str = "fetch_one",
+    ) -> dict[str, Any]:
+        logger.info("Executing query", extra={"query_name": query_name})
+        with observation_context(
+            f"mysql.{query_name}",
+            as_type="retriever",
+            input={"query_name": query_name, "param_count": len(params or ())},
+        ):
+            with self.connection() as conn:
+                try:
+                    with conn.cursor() as cursor:
+                        cursor.execute(query, params or ())
+                        row = cursor.fetchone()
+                        result = row or {}
+                        update_current_span(output={"row_count": 1 if result else 0})
+                        return result
+                except Exception as exc:
+                    logger.exception("Database query failed.")
+                    update_current_span(
+                        output={"query_name": query_name},
+                        level="ERROR",
+                        status_message="query_failed",
+                    )
+                    raise DatabaseQueryError() from exc
 
     def fetch_all(
-        self, query: str, params: tuple[Any, ...] | None = None
+        self,
+        query: str,
+        params: tuple[Any, ...] | None = None,
+        *,
+        query_name: str = "fetch_all",
     ) -> list[dict[str, Any]]:
-        logger.info("Executing query", extra={"query_name": "fetch_all"})
-        with self.connection() as conn:
-            try:
-                with conn.cursor() as cursor:
-                    cursor.execute(query, params or ())
-                    return list(cursor.fetchall())
-            except Exception as exc:
-                logger.exception("Database query failed.")
-                raise DatabaseQueryError() from exc
+        logger.info("Executing query", extra={"query_name": query_name})
+        with observation_context(
+            f"mysql.{query_name}",
+            as_type="retriever",
+            input={"query_name": query_name, "param_count": len(params or ())},
+        ):
+            with self.connection() as conn:
+                try:
+                    with conn.cursor() as cursor:
+                        cursor.execute(query, params or ())
+                        rows = list(cursor.fetchall())
+                        update_current_span(output={"row_count": len(rows)})
+                        return rows
+                except Exception as exc:
+                    logger.exception("Database query failed.")
+                    update_current_span(
+                        output={"query_name": query_name},
+                        level="ERROR",
+                        status_message="query_failed",
+                    )
+                    raise DatabaseQueryError() from exc
 
 
 @lru_cache

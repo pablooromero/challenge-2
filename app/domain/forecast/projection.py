@@ -1,6 +1,7 @@
 from app.domain.analytics.breakdowns import get_monthly_aggregates
 from app.domain.forecast.outliers import attenuate_series
 from app.domain.forecast.series import SeriesPoint, month_after, period_month
+from app.observability import observation_context, update_current_span
 from app.schemas.analytics import AnalyticsMeta
 from app.schemas.forecast import ForecastHistoryPoint, ForecastProjection, ForecastResult
 
@@ -77,63 +78,84 @@ def forecast_next_month(
     vehicle_type: str | None = None,
     vehicle_model: str | None = None,
 ) -> ForecastResult:
-    monthly = get_monthly_aggregates(
-        start_date=start_date,
-        end_date=end_date,
-        vehicle_type=vehicle_type,
-        vehicle_model=vehicle_model,
-    )
-    if not monthly.rows:
-        meta = monthly.meta
-        meta.warnings.append("Forecast could not be generated because no monthly data is available.")
-        return ForecastResult(
+    with observation_context(
+        "forecast.next_month",
+        as_type="chain",
+        input={
+            "start_date": start_date,
+            "end_date": end_date,
+            "vehicle_type": vehicle_type,
+            "vehicle_model": vehicle_model,
+        },
+    ):
+        monthly = get_monthly_aggregates(
+            start_date=start_date,
+            end_date=end_date,
+            vehicle_type=vehicle_type,
+            vehicle_model=vehicle_model,
+        )
+        if not monthly.rows:
+            meta = monthly.meta
+            meta.warnings.append("Forecast could not be generated because no monthly data is available.")
+            result = ForecastResult(
+                meta=meta,
+                projected_period="unknown",
+                methodology=methodology_text(),
+                leads_projection=ForecastProjection(
+                    metric="total_leads",
+                    projected_value=0,
+                    trend_component=0.0,
+                    seasonal_component=None,
+                    blended_value=0.0,
+                ),
+                sales_projection=ForecastProjection(
+                    metric="total_sales",
+                    projected_value=0,
+                    trend_component=0.0,
+                    seasonal_component=None,
+                    blended_value=0.0,
+                ),
+            )
+            update_current_span(output={"projected_period": "unknown", "warnings_count": len(meta.warnings)})
+            return result
+
+        target_period = month_after(monthly.rows[-1].period)
+        meta = AnalyticsMeta.model_validate(monthly.meta.model_dump())
+        meta.granularity = "forecast_month"
+        meta.primary_unit = "count"
+
+        if len(monthly.rows) < 3:
+            meta.warnings.append(
+                "Forecast is based on fewer than three months of history, so confidence is limited."
+            )
+
+        leads_points = attenuate_series(monthly.rows, "total_leads")
+        sales_points = attenuate_series(monthly.rows, "total_sales")
+
+        if any(point.is_outlier for point in leads_points + sales_points):
+            meta.warnings.append("Outlier attenuation was applied to reduce the impact of atypical months.")
+
+        leads_projection = build_projection("total_leads", leads_points, target_period)
+        sales_projection = build_projection("total_sales", sales_points, target_period)
+
+        if leads_projection.seasonal_component is None or sales_projection.seasonal_component is None:
+            meta.warnings.append(
+                "Seasonal adjustment was unavailable for at least one metric, so the forecast leans more on recent trend."
+            )
+
+        result = ForecastResult(
             meta=meta,
-            projected_period="unknown",
+            projected_period=target_period,
             methodology=methodology_text(),
-            leads_projection=ForecastProjection(
-                metric="total_leads",
-                projected_value=0,
-                trend_component=0.0,
-                seasonal_component=None,
-                blended_value=0.0,
-            ),
-            sales_projection=ForecastProjection(
-                metric="total_sales",
-                projected_value=0,
-                trend_component=0.0,
-                seasonal_component=None,
-                blended_value=0.0,
-            ),
+            leads_projection=leads_projection,
+            sales_projection=sales_projection,
         )
-
-    target_period = month_after(monthly.rows[-1].period)
-    meta = AnalyticsMeta.model_validate(monthly.meta.model_dump())
-    meta.granularity = "forecast_month"
-    meta.primary_unit = "count"
-
-    if len(monthly.rows) < 3:
-        meta.warnings.append(
-            "Forecast is based on fewer than three months of history, so confidence is limited."
+        update_current_span(
+            output={
+                "projected_period": target_period,
+                "projected_leads": leads_projection.projected_value,
+                "projected_sales": sales_projection.projected_value,
+                "warnings_count": len(meta.warnings),
+            }
         )
-
-    leads_points = attenuate_series(monthly.rows, "total_leads")
-    sales_points = attenuate_series(monthly.rows, "total_sales")
-
-    if any(point.is_outlier for point in leads_points + sales_points):
-        meta.warnings.append("Outlier attenuation was applied to reduce the impact of atypical months.")
-
-    leads_projection = build_projection("total_leads", leads_points, target_period)
-    sales_projection = build_projection("total_sales", sales_points, target_period)
-
-    if leads_projection.seasonal_component is None or sales_projection.seasonal_component is None:
-        meta.warnings.append(
-            "Seasonal adjustment was unavailable for at least one metric, so the forecast leans more on recent trend."
-        )
-
-    return ForecastResult(
-        meta=meta,
-        projected_period=target_period,
-        methodology=methodology_text(),
-        leads_projection=leads_projection,
-        sales_projection=sales_projection,
-    )
+        return result

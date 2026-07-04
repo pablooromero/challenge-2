@@ -2,6 +2,7 @@ from langchain.tools import tool
 from pydantic import BaseModel, Field
 
 from app.domain.forecast.projection import forecast_next_month
+from app.observability import observation_context, update_current_span
 
 
 class ForecastInput(BaseModel):
@@ -19,13 +20,30 @@ def forecast_next_month_tool(
     vehicle_model: str | None = None,
 ) -> dict:
     """Project next-month leads and sales using deterministic trend and seasonality logic."""
-    result = forecast_next_month(
-        start_date=start_date,
-        end_date=end_date,
-        vehicle_type=vehicle_type,
-        vehicle_model=vehicle_model,
-    )
-    return result.model_dump(by_alias=True)
+    with observation_context(
+        "assistant.tool.forecast_next_month",
+        as_type="tool",
+        input={
+            "start_date": start_date,
+            "end_date": end_date,
+            "vehicle_type": vehicle_type,
+            "vehicle_model": vehicle_model,
+        },
+    ):
+        result = forecast_next_month(
+            start_date=start_date,
+            end_date=end_date,
+            vehicle_type=vehicle_type,
+            vehicle_model=vehicle_model,
+        )
+        update_current_span(
+            output={
+                "projected_period": result.projected_period,
+                "projected_leads": result.leads_projection.projected_value,
+                "projected_sales": result.sales_projection.projected_value,
+            }
+        )
+        return result.model_dump(by_alias=True)
 
 
 def get_forecast_tools() -> list:

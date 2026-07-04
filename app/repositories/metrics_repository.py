@@ -13,7 +13,7 @@ def fetch_data_coverage(where_clause: str = "", params: tuple[Any, ...] = ()) ->
         FROM `{db.table}`
         {where_clause}
     """
-    return db.fetch_one(query, params)
+    return db.fetch_one(query, params, query_name="data_coverage")
 
 
 def fetch_basic_kpis(where_clause: str = "", params: tuple[Any, ...] = ()) -> dict[str, Any]:
@@ -29,7 +29,7 @@ def fetch_basic_kpis(where_clause: str = "", params: tuple[Any, ...] = ()) -> di
         FROM `{db.table}`
         {where_clause}
     """
-    return db.fetch_one(query, params)
+    return db.fetch_one(query, params, query_name="basic_kpis")
 
 
 def fetch_monthly_aggregates(where_clause: str = "", params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
@@ -48,7 +48,7 @@ def fetch_monthly_aggregates(where_clause: str = "", params: tuple[Any, ...] = (
         GROUP BY DATE_FORMAT(fecha, '%%Y-%%m')
         ORDER BY DATE_FORMAT(fecha, '%%Y-%%m')
     """
-    return db.fetch_all(query, params)
+    return db.fetch_all(query, params, query_name="monthly_aggregates")
 
 
 def fetch_channel_breakdown(where_clause: str = "", params: tuple[Any, ...] = ()) -> dict[str, Any]:
@@ -66,7 +66,7 @@ def fetch_channel_breakdown(where_clause: str = "", params: tuple[Any, ...] = ()
         FROM `{db.table}`
         {where_clause}
     """
-    return db.fetch_one(query, params)
+    return db.fetch_one(query, params, query_name="channel_breakdown")
 
 
 def fetch_vehicle_breakdown(
@@ -87,4 +87,4 @@ def fetch_vehicle_breakdown(
         {where_clause}
         GROUP BY {group_clause}
     """
-    return db.fetch_all(query, params)
+    return db.fetch_all(query, params, query_name="vehicle_breakdown")

@@ -1,7 +1,11 @@
+import logging
 from dataclasses import dataclass, field
 
+from fastapi.exceptions import RequestValidationError
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -12,7 +16,15 @@ class AppError(Exception):
     details: dict[str, str] = field(default_factory=dict)
 
 
-class ConfigurationError(AppError):
+class DomainError(AppError):
+    pass
+
+
+class InfrastructureError(AppError):
+    pass
+
+
+class ConfigurationError(InfrastructureError):
     def __init__(self, message: str = "Application configuration is invalid.") -> None:
         super().__init__(
             message=message,
@@ -21,7 +33,7 @@ class ConfigurationError(AppError):
         )
 
 
-class DatabaseConfigurationError(AppError):
+class DatabaseConfigurationError(InfrastructureError):
     def __init__(self, message: str = "Database configuration is incomplete.") -> None:
         super().__init__(
             message=message,
@@ -30,7 +42,7 @@ class DatabaseConfigurationError(AppError):
         )
 
 
-class DatabaseConnectionError(AppError):
+class DatabaseConnectionError(InfrastructureError):
     def __init__(self, message: str = "Database connection failed.") -> None:
         super().__init__(
             message=message,
@@ -39,7 +51,7 @@ class DatabaseConnectionError(AppError):
         )
 
 
-class DatabaseQueryError(AppError):
+class DatabaseQueryError(InfrastructureError):
     def __init__(self, message: str = "Database query failed.") -> None:
         super().__init__(
             message=message,
@@ -48,7 +60,7 @@ class DatabaseQueryError(AppError):
         )
 
 
-class AnalyticsValidationError(AppError):
+class AnalyticsValidationError(DomainError):
     def __init__(self, message: str = "Analytics input is invalid.") -> None:
         super().__init__(
             message=message,
@@ -57,7 +69,16 @@ class AnalyticsValidationError(AppError):
         )
 
 
-class LLMConfigurationError(AppError):
+class AmbiguousQueryError(DomainError):
+    def __init__(self, message: str = "The query is ambiguous and needs reformulation.") -> None:
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code="ambiguous_query_error",
+        )
+
+
+class LLMConfigurationError(InfrastructureError):
     def __init__(self, message: str = "LLM configuration is incomplete.") -> None:
         super().__init__(
             message=message,
@@ -66,7 +87,7 @@ class LLMConfigurationError(AppError):
         )
 
 
-class LLMInvocationError(AppError):
+class LLMInvocationError(InfrastructureError):
     def __init__(self, message: str = "LLM request failed.") -> None:
         super().__init__(
             message=message,
@@ -75,7 +96,18 @@ class LLMInvocationError(AppError):
         )
 
 
+class ObservabilityError(InfrastructureError):
+    def __init__(self, message: str = "Observability instrumentation failed.") -> None:
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code="observability_error",
+        )
+
+
 async def app_error_handler(_: Request, exc: AppError) -> JSONResponse:
+    log_method = logger.error if exc.status_code >= 500 else logger.warning
+    log_method("Handled application error [%s]: %s", exc.code, exc.message)
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -88,7 +120,27 @@ async def app_error_handler(_: Request, exc: AppError) -> JSONResponse:
     )
 
 
+async def validation_error_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+    details: dict[str, str] = {}
+    for error in exc.errors():
+        location = ".".join(str(part) for part in error.get("loc", []) if part != "body")
+        key = location or "request"
+        details[key] = error.get("msg", "Invalid request.")
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "error": {
+                "code": "validation_error",
+                "message": "The request payload is invalid.",
+                "details": details,
+            }
+        },
+    )
+
+
 async def unexpected_error_handler(_: Request, __: Exception) -> JSONResponse:
+    logger.exception("Unhandled application exception.")
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={

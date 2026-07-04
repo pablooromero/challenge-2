@@ -5,6 +5,8 @@ from langchain_core.messages import AIMessage, ToolMessage
 
 from app.agent.graph.state import AssistantState
 from app.agent.llm import compose_answer_with_llm
+from app.agent.prompting import compile_prompt
+from app.observability import observation_context, update_current_span
 
 
 def latest_tool_result(state: AssistantState) -> dict[str, Any] | None:
@@ -38,19 +40,67 @@ def metric_label(metric: str) -> str:
     return labels.get(metric, metric)
 
 
+def question_mentions_freshness(question: str) -> bool:
+    freshness_tokens = (
+        "al dia de hoy",
+        "a hoy",
+        "hoy",
+        "actual",
+        "actuales",
+        "hasta la fecha",
+    )
+    return any(token in question for token in freshness_tokens)
+
+
+def append_freshness_notice(answer: str, question: str, meta: dict[str, Any]) -> str:
+    data_range = meta.get("data_range") or {}
+    last_data_date = data_range.get("to")
+    if not last_data_date:
+        return answer
+    if not question_mentions_freshness(question):
+        return answer
+    if last_data_date in answer or "ultimo dato disponible" in answer.lower():
+        return answer
+    return f"{answer} El ultimo dato disponible en la base es {last_data_date}."
+
+
 def build_deterministic_answer(state: AssistantState) -> dict[str, Any]:
     intent = state.get("intent", "basic_kpi")
     metric = state.get("metric") or "total_sales"
+    question = state.get("normalized_question", "")
     tool_result = latest_tool_result(state)
+    prompt_versions = dict(state.get("prompt_versions", {}))
     if tool_result is None:
-        return {"error": "No se pudo recuperar el resultado de la herramienta analitica."}
+        return {
+            "error": "No se pudo recuperar el resultado de la herramienta analitica.",
+            "error_reason": "tool_result_missing_after_execution",
+            "error_details": {"intent": intent},
+        }
     if "tool_error" in tool_result:
-        return {"error": "No pude consultar la capa de datos en este momento."}
+        return {
+            "error": "No pude consultar la capa de datos en este momento.",
+            "error_reason": "tool_execution_failed",
+            "error_details": {"tool_error": str(tool_result["tool_error"])[:160]},
+        }
     if "meta" not in tool_result:
-        return {"error": "La herramienta analitica devolvio un formato inesperado."}
+        return {
+            "error": "La herramienta analitica devolvio un formato inesperado.",
+            "error_reason": "tool_result_invalid_format",
+            "error_details": {"intent": intent},
+        }
 
     meta = tool_result.get("meta", {})
     warnings = list(meta.get("warnings", []))
+    if meta.get("record_count") == 0:
+        return {
+            "tool_result": tool_result,
+            "warnings": warnings,
+            "answer": "No encontre datos para los filtros o el periodo solicitado.",
+            "last_metric": metric,
+            "last_intent": intent,
+            "prompt_versions": prompt_versions,
+        }
+
     answer = "No se pudo componer una respuesta."
     last_metric = metric
     last_intent = intent
@@ -87,12 +137,14 @@ def build_deterministic_answer(state: AssistantState) -> dict[str, Any]:
             )
             last_metric = tool_result["high_metric"]
     elif intent == "forecast":
-        answer = (
-            f"Para {tool_result['projected_period']} la proyeccion es de "
-            f"{tool_result['leads_projection']['projected_value']} leads y "
-            f"{tool_result['sales_projection']['projected_value']} ventas. "
-            "Es un forecast deterministico basado en tendencia reciente y ajuste estacional suave."
+        forecast_prompt = compile_prompt(
+            "bi-assistant-forecast-explainer",
+            projected_period=tool_result["projected_period"],
+            projected_leads=tool_result["leads_projection"]["projected_value"],
+            projected_sales=tool_result["sales_projection"]["projected_value"],
         )
+        prompt_versions[forecast_prompt.name] = forecast_prompt.meta()
+        answer = str(forecast_prompt.compiled)
         last_metric = "total_sales"
     elif intent == "channel_breakdown":
         rows = tool_result.get("rows", [])
@@ -122,93 +174,119 @@ def build_deterministic_answer(state: AssistantState) -> dict[str, Any]:
     else:
         answer = "Todavia no puedo resolver esa consulta con el flujo actual."
 
+    answer = append_freshness_notice(answer, question, meta)
+
     return {
         "tool_result": tool_result,
         "warnings": warnings,
         "answer": answer,
         "last_metric": last_metric,
         "last_intent": last_intent,
+        "prompt_versions": prompt_versions,
     }
 
 
 def compose_answer(state: AssistantState) -> dict[str, Any]:
-    deterministic_payload = build_deterministic_answer(state)
-    if deterministic_payload.get("error"):
-        return deterministic_payload
+    with observation_context(
+        "assistant.node.compose_answer",
+        as_type="agent",
+        input={"intent": state.get("intent"), "thread_id": state.get("thread_id")},
+    ):
+        deterministic_payload = build_deterministic_answer(state)
+        if deterministic_payload.get("error"):
+            return deterministic_payload
 
-    warnings = list(deterministic_payload["warnings"])
-    answer = deterministic_payload["answer"]
-    llm_answer, llm_warnings, llm_model = compose_answer_with_llm(
-        question=state.get("normalized_question", ""),
-        intent=state.get("intent", "basic_kpi"),
-        fallback_answer=answer,
-        tool_result=deterministic_payload["tool_result"],
-        warnings=warnings,
-        thread_id=state.get("thread_id"),
-    )
-    warnings.extend(llm_warnings)
+        warnings = list(deterministic_payload["warnings"])
+        answer = deterministic_payload["answer"]
+        prompt_versions = dict(deterministic_payload.get("prompt_versions", {}))
+        llm_answer, llm_warnings, llm_model, llm_prompts = compose_answer_with_llm(
+            question=state.get("normalized_question", ""),
+            intent=state.get("intent", "basic_kpi"),
+            fallback_answer=answer,
+            tool_result=deterministic_payload["tool_result"],
+            warnings=warnings,
+            thread_id=state.get("thread_id"),
+        )
+        warnings.extend(llm_warnings)
+        prompt_versions.update(llm_prompts)
 
-    if llm_answer is not None:
-        answer = llm_answer
+        if llm_answer is not None:
+            answer = llm_answer
 
-    return {
-        **deterministic_payload,
-        "warnings": warnings,
-        "answer": answer,
-        "response_source": "openai" if llm_answer is not None else "rules",
-        "llm_model": llm_model or state.get("llm_model"),
-        "messages": [AIMessage(content=answer)],
-    }
+        response_source = "openai" if llm_answer is not None else "rules"
+        update_current_span(
+            output={"response_source": response_source, "warnings_count": len(warnings)},
+            metadata={
+                "response_source": response_source,
+                "classification_reason": state.get("classification_reason") or "unknown",
+                "planning_reason": state.get("planning_reason") or "unknown",
+            },
+        )
+        return {
+            **deterministic_payload,
+            "warnings": warnings,
+            "answer": answer,
+            "response_source": response_source,
+            "llm_model": llm_model or state.get("llm_model"),
+            "prompt_versions": prompt_versions,
+            "messages": [AIMessage(content=answer)],
+        }
 
 
 def build_chart_payload(state: AssistantState) -> dict[str, Any]:
-    intent = state.get("intent", "basic_kpi")
-    tool_result = state.get("tool_result")
-    if not tool_result:
-        return {"chart_payload": None}
+    with observation_context(
+        "assistant.node.build_chart_payload",
+        as_type="agent",
+        input={"intent": state.get("intent"), "thread_id": state.get("thread_id")},
+    ):
+        intent = state.get("intent", "basic_kpi")
+        tool_result = state.get("tool_result")
+        if not tool_result:
+            return {"chart_payload": None}
 
-    chart_payload: dict[str, Any] | None = None
+        chart_payload: dict[str, Any] | None = None
 
-    if intent == "channel_breakdown":
-        rows = tool_result.get("rows", [])
-        chart_payload = {
-            "type": "bar",
-            "labels": [row["channel"] for row in rows],
-            "datasets": [
-                {"label": "Leads", "data": [row["total_leads"] for row in rows]},
-                {"label": "Costo USD", "data": [row["total_ad_cost_usd"] for row in rows]},
-            ],
-        }
-    elif intent == "vehicle_breakdown":
-        rows = tool_result.get("rows", [])
-        labels = [
-            " / ".join([segment for segment in [row.get("vehicle_type"), row.get("vehicle_model")] if segment])
-            for row in rows
-        ]
-        chart_payload = {
-            "type": "bar",
-            "labels": labels,
-            "datasets": [{"label": "Ventas", "data": [row["total_sales"] for row in rows]}],
-        }
-    elif intent == "forecast":
-        leads_history = tool_result["leads_projection"]["history"]
-        sales_history = tool_result["sales_projection"]["history"]
-        projected_period = tool_result["projected_period"]
-        chart_payload = {
-            "type": "line",
-            "labels": [point["period"] for point in leads_history] + [projected_period],
-            "datasets": [
-                {
-                    "label": "Leads proyectados",
-                    "data": [point["adjusted_value"] for point in leads_history]
-                    + [tool_result["leads_projection"]["projected_value"]],
-                },
-                {
-                    "label": "Ventas proyectadas",
-                    "data": [point["adjusted_value"] for point in sales_history]
-                    + [tool_result["sales_projection"]["projected_value"]],
-                },
-            ],
-        }
+        if intent == "channel_breakdown":
+            rows = tool_result.get("rows", [])
+            chart_payload = {
+                "type": "bar",
+                "labels": [row["channel"] for row in rows],
+                "datasets": [
+                    {"label": "Leads", "data": [row["total_leads"] for row in rows]},
+                    {"label": "Costo USD", "data": [row["total_ad_cost_usd"] for row in rows]},
+                ],
+            }
+        elif intent == "vehicle_breakdown":
+            rows = tool_result.get("rows", [])
+            labels = [
+                " / ".join([segment for segment in [row.get("vehicle_type"), row.get("vehicle_model")] if segment])
+                for row in rows
+            ]
+            chart_payload = {
+                "type": "bar",
+                "labels": labels,
+                "datasets": [{"label": "Ventas", "data": [row["total_sales"] for row in rows]}],
+            }
+        elif intent == "forecast":
+            leads_history = tool_result["leads_projection"]["history"]
+            sales_history = tool_result["sales_projection"]["history"]
+            projected_period = tool_result["projected_period"]
+            chart_payload = {
+                "type": "line",
+                "labels": [point["period"] for point in leads_history] + [projected_period],
+                "datasets": [
+                    {
+                        "label": "Leads proyectados",
+                        "data": [point["adjusted_value"] for point in leads_history]
+                        + [tool_result["leads_projection"]["projected_value"]],
+                    },
+                    {
+                        "label": "Ventas proyectadas",
+                        "data": [point["adjusted_value"] for point in sales_history]
+                        + [tool_result["sales_projection"]["projected_value"]],
+                    },
+                ],
+            }
 
-    return {"chart_payload": chart_payload}
+        update_current_span(output={"chart_type": chart_payload.get("type") if chart_payload else None})
+        return {"chart_payload": chart_payload}
