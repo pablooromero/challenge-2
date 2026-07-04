@@ -1,7 +1,7 @@
-from app.config import get_settings
-from app.errors import AppError, DatabaseConfigurationError
+from app.core.config import get_settings
+from app.core.errors import AppError, DatabaseConfigurationError
+from app.repositories.database_client import get_database_client
 from app.schemas.responses import HealthResponse
-from app.services.database import get_database_client
 
 
 def build_health_response() -> HealthResponse:

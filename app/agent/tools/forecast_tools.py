@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field
 from langchain.tools import tool
+from pydantic import BaseModel, Field
 
-from app.services.forecast import forecast_next_month
+from app.domain.forecast.projection import forecast_next_month
 
 
 class ForecastInput(BaseModel):

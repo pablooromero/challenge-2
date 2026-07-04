@@ -1,13 +1,14 @@
 import logging
 from contextlib import contextmanager
+from functools import lru_cache
 from typing import Any, Iterator
 
 import pymysql
 from pymysql.connections import Connection
 from pymysql.cursors import DictCursor
 
-from app.config import Settings
-from app.errors import (
+from app.core.config import Settings, get_settings
+from app.core.errors import (
     DatabaseConfigurationError,
     DatabaseConnectionError,
     DatabaseQueryError,
@@ -48,6 +49,10 @@ class DatabaseClient:
             "write_timeout": self.settings.mysql_write_timeout,
             "autocommit": True,
         }
+
+    @property
+    def table(self) -> str:
+        return self.settings.mysql_table
 
     @contextmanager
     def connection(self) -> Iterator[Connection]:
@@ -98,3 +103,8 @@ class DatabaseClient:
             except Exception as exc:
                 logger.exception("Database query failed.")
                 raise DatabaseQueryError() from exc
+
+
+@lru_cache
+def get_database_client() -> DatabaseClient:
+    return DatabaseClient(get_settings())

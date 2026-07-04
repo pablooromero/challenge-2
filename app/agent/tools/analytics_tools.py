@@ -3,15 +3,15 @@ from typing import Literal
 from langchain.tools import tool
 from pydantic import BaseModel, Field
 
-from app.schemas.analytics import MetricName, SortField, VehicleGroupBy
-from app.services.analytics import (
-    find_best_or_worst_period,
-    find_relational_pattern,
-    get_basic_kpis,
+from app.domain.analytics.breakdowns import (
     get_channel_breakdown,
     get_monthly_aggregates,
     get_vehicle_breakdown,
 )
+from app.domain.analytics.kpis import get_basic_kpis
+from app.domain.analytics.ranking import find_best_or_worst_period
+from app.domain.analytics.relational import find_relational_pattern
+from app.schemas.analytics import MetricName, SortField, VehicleGroupBy
 
 
 class AnalyticsFilterInput(BaseModel):

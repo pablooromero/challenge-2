@@ -1,75 +1,15 @@
-from __future__ import annotations
-
-from dataclasses import dataclass
-from datetime import date
-from statistics import quantiles
-
+from app.domain.analytics.breakdowns import get_monthly_aggregates
+from app.domain.forecast.outliers import attenuate_series
+from app.domain.forecast.series import SeriesPoint, month_after, period_month
 from app.schemas.analytics import AnalyticsMeta
 from app.schemas.forecast import ForecastHistoryPoint, ForecastProjection, ForecastResult
-from app.services.analytics import get_monthly_aggregates
 
 TREND_WEIGHT = 0.7
 SEASONAL_WEIGHT = 0.3
 RECENT_WEIGHTS = (0.5, 0.3, 0.2)
 
 
-@dataclass
-class SeriesPoint:
-    period: str
-    raw_value: float
-    adjusted_value: float
-    is_outlier: bool
-
-
-def _month_after(period: str) -> str:
-    year, month = map(int, period.split("-"))
-    if month == 12:
-        return f"{year + 1}-01"
-    return f"{year:04d}-{month + 1:02d}"
-
-
-def _period_month(period: str) -> int:
-    return int(period.split("-")[1])
-
-
-def _compute_iqr_bounds(values: list[float]) -> tuple[float | None, float | None]:
-    if len(values) < 4:
-        return None, None
-    q1, _, q3 = quantiles(values, n=4, method="inclusive")
-    iqr = q3 - q1
-    return q1 - (1.5 * iqr), q3 + (1.5 * iqr)
-
-
-def _attenuate_series(rows: list, metric: str) -> list[SeriesPoint]:
-    values = [float(getattr(row, metric)) for row in rows]
-    lower, upper = _compute_iqr_bounds(values)
-
-    points: list[SeriesPoint] = []
-    for row in rows:
-        raw_value = float(getattr(row, metric))
-        is_outlier = False
-        adjusted_value = raw_value
-
-        if lower is not None and upper is not None:
-            if raw_value < lower:
-                adjusted_value = lower
-                is_outlier = True
-            elif raw_value > upper:
-                adjusted_value = upper
-                is_outlier = True
-
-        points.append(
-            SeriesPoint(
-                period=row.period,
-                raw_value=raw_value,
-                adjusted_value=adjusted_value,
-                is_outlier=is_outlier,
-            )
-        )
-    return points
-
-
-def _weighted_average(values: list[float]) -> float:
+def weighted_average(values: list[float]) -> float:
     if not values:
         return 0.0
     if len(values) >= 3:
@@ -83,19 +23,19 @@ def _weighted_average(values: list[float]) -> float:
     return sum(value * weight for value, weight in zip(recent, weights)) / weight_total
 
 
-def _seasonal_reference(points: list[SeriesPoint], target_period: str) -> tuple[float | None, str | None]:
-    target_month = _period_month(target_period)
-    matching = [point for point in points if _period_month(point.period) == target_month]
+def seasonal_reference(points: list[SeriesPoint], target_period: str) -> tuple[float | None, str | None]:
+    target_month = period_month(target_period)
+    matching = [point for point in points if period_month(point.period) == target_month]
     if not matching:
         return None, None
     reference = matching[-1]
     return reference.adjusted_value, reference.period
 
 
-def _build_projection(metric: str, points: list[SeriesPoint], target_period: str) -> ForecastProjection:
+def build_projection(metric: str, points: list[SeriesPoint], target_period: str) -> ForecastProjection:
     adjusted_values = [point.adjusted_value for point in points]
-    trend_component = round(_weighted_average(adjusted_values), 2)
-    seasonal_value, seasonal_period = _seasonal_reference(points[:-1], target_period)
+    trend_component = round(weighted_average(adjusted_values), 2)
+    seasonal_value, _ = seasonal_reference(points[:-1], target_period)
 
     if seasonal_value is None:
         blended = trend_component
@@ -103,7 +43,6 @@ def _build_projection(metric: str, points: list[SeriesPoint], target_period: str
         blended = (trend_component * TREND_WEIGHT) + (seasonal_value * SEASONAL_WEIGHT)
 
     outlier_periods = [point.period for point in points if point.is_outlier]
-
     history = [
         ForecastHistoryPoint(
             period=point.period,
@@ -113,7 +52,6 @@ def _build_projection(metric: str, points: list[SeriesPoint], target_period: str
         )
         for point in points
     ]
-
     return ForecastProjection(
         metric=metric,  # type: ignore[arg-type]
         projected_value=max(0, round(blended)),
@@ -125,7 +63,7 @@ def _build_projection(metric: str, points: list[SeriesPoint], target_period: str
     )
 
 
-def _methodology_text() -> str:
+def methodology_text() -> str:
     return (
         "Forecast based on monthly aggregates, with IQR-based outlier attenuation, "
         "a weighted moving average over the three most recent months, and a soft "
@@ -151,7 +89,7 @@ def forecast_next_month(
         return ForecastResult(
             meta=meta,
             projected_period="unknown",
-            methodology=_methodology_text(),
+            methodology=methodology_text(),
             leads_projection=ForecastProjection(
                 metric="total_leads",
                 projected_value=0,
@@ -168,7 +106,7 @@ def forecast_next_month(
             ),
         )
 
-    target_period = _month_after(monthly.rows[-1].period)
+    target_period = month_after(monthly.rows[-1].period)
     meta = AnalyticsMeta.model_validate(monthly.meta.model_dump())
     meta.granularity = "forecast_month"
     meta.primary_unit = "count"
@@ -178,14 +116,14 @@ def forecast_next_month(
             "Forecast is based on fewer than three months of history, so confidence is limited."
         )
 
-    leads_points = _attenuate_series(monthly.rows, "total_leads")
-    sales_points = _attenuate_series(monthly.rows, "total_sales")
+    leads_points = attenuate_series(monthly.rows, "total_leads")
+    sales_points = attenuate_series(monthly.rows, "total_sales")
 
     if any(point.is_outlier for point in leads_points + sales_points):
         meta.warnings.append("Outlier attenuation was applied to reduce the impact of atypical months.")
 
-    leads_projection = _build_projection("total_leads", leads_points, target_period)
-    sales_projection = _build_projection("total_sales", sales_points, target_period)
+    leads_projection = build_projection("total_leads", leads_points, target_period)
+    sales_projection = build_projection("total_sales", sales_points, target_period)
 
     if leads_projection.seasonal_component is None or sales_projection.seasonal_component is None:
         meta.warnings.append(
@@ -195,7 +133,7 @@ def forecast_next_month(
     return ForecastResult(
         meta=meta,
         projected_period=target_period,
-        methodology=_methodology_text(),
+        methodology=methodology_text(),
         leads_projection=leads_projection,
         sales_projection=sales_projection,
     )

@@ -5,19 +5,13 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
 from langgraph.types import RetryPolicy
 
-from app.graph.nodes import (
-    build_chart_payload,
-    classify_intent_and_entities,
-    compose_answer,
-    error_handler,
-    normalize_input,
-    plan_tools,
-    resolve_context,
-    route_after_planning,
-    route_on_error,
-)
-from app.graph.state import AssistantState
-from app.tools import get_all_tools
+from app.agent.graph.nodes.classification import classify_intent_and_entities, resolve_context
+from app.agent.graph.nodes.error_handling import error_handler, route_after_planning, route_on_error
+from app.agent.graph.nodes.input import normalize_input
+from app.agent.graph.nodes.planning import plan_tools
+from app.agent.graph.nodes.response import build_chart_payload, compose_answer
+from app.agent.graph.state import AssistantState
+from app.agent.tools import get_all_tools
 
 
 @lru_cache

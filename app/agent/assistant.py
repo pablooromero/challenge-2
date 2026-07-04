@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from langchain_core.messages import HumanMessage
 
-from app.graph.builder import get_assistant_graph
+from app.agent.graph.builder import get_assistant_graph
 from app.schemas.responses import ChartPayload, ChatMeta, ChatResponse, DataRange
 
 

@@ -6,8 +6,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router as api_router
-from app.config import get_settings
-from app.errors import AppError, app_error_handler, unexpected_error_handler
+from app.core.config import get_settings
+from app.core.errors import AppError, app_error_handler, unexpected_error_handler
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
