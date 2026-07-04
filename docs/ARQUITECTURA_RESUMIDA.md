@@ -46,7 +46,11 @@ Dejar definida la base del proyecto para que el BI Assistant crezca de forma ord
 
 `GET /api/coverage`
 
-- placeholder hasta integrar MySQL en la siguiente fase
+- devuelve el rango real de datos y cantidad de registros desde MySQL
+
+`GET /api/kpis`
+
+- devuelve un resumen agregado inicial de leads, ventas, ingresos, costo, clics e impresiones
 
 ## Estrategia de logs y errores
 

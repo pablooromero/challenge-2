@@ -1,9 +1,6 @@
-from app.schemas.responses import CoverageResponse, DataRange
+from app.schemas.responses import CoverageResponse
+from app.services.analytics import get_data_coverage
 
 
-def build_coverage_placeholder() -> CoverageResponse:
-    return CoverageResponse(
-        status="pending",
-        message="La cobertura real de datos se habilitara cuando integremos MySQL en la fase 2.",
-        data_range=DataRange(from_date=None, to_date=None),
-    )
+def build_coverage_response() -> CoverageResponse:
+    return get_data_coverage()

@@ -35,12 +35,12 @@ Antes de ejecutar cualquier fase, estas reglas guian toda la implementacion:
 - [x] Centralizar configuracion en variables de entorno.
 - [x] Usar el backend como unico punto de acceso a MySQL y al proveedor LLM.
 - [ ] Tratar el LLM como capa de interpretacion y redaccion, no como motor de calculo principal.
-- [ ] Implementar tools tipadas y auditables en lugar de SQL libre generado sin control.
+- [x] Implementar tools tipadas y auditables en lugar de SQL libre generado sin control.
 - [ ] Diseñar el agente con flujos controlados, no con autonomia ilimitada.
 - [ ] Instrumentar observabilidad desde el inicio para no agregarla tarde.
 - [ ] Mantener prompts versionados y desacoplados del codigo mediante Langfuse.
-- [ ] Diseñar degradacion elegante ante fallos de BD, LLM u observabilidad.
-- [ ] Priorizar respuestas correctas y explicables por sobre complejidad innecesaria.
+- [x] Diseñar degradacion elegante ante fallos de BD, LLM u observabilidad.
+- [x] Priorizar respuestas correctas y explicables por sobre complejidad innecesaria.
 - [x] Implementar validacion fuerte de inputs y outputs.
 - [x] Asegurar codigo modular, testeable y facil de explicar en entrevista.
 
@@ -181,36 +181,36 @@ Conectar la base real y encapsular acceso a datos de forma segura, reutilizable 
 
 ### Tareas
 
-- [ ] Crear modulo de configuracion de BD.
-- [ ] Implementar fabrica o helper de conexion.
-- [ ] Configurar timeouts razonables.
-- [ ] Implementar funcion de test de conexion.
-- [ ] Crear `get_data_coverage`.
-- [ ] Crear primeras consultas de KPI agregados.
-- [ ] Encapsular queries en una capa `database.py` o equivalente.
-- [ ] Usar SQL parametrizado.
-- [ ] Agregar logs de consultas de alto nivel sin filtrar secretos.
-- [ ] Definir errores especificos de acceso a datos.
+- [x] Crear modulo de configuracion de BD.
+- [x] Implementar fabrica o helper de conexion.
+- [x] Configurar timeouts razonables.
+- [x] Implementar funcion de test de conexion.
+- [x] Crear `get_data_coverage`.
+- [x] Crear primeras consultas de KPI agregados.
+- [x] Encapsular queries en una capa `database.py` o equivalente.
+- [x] Usar SQL parametrizado.
+- [x] Agregar logs de consultas de alto nivel sin filtrar secretos.
+- [x] Definir errores especificos de acceso a datos.
 
 ### Buenas practicas de acceso a datos
 
-- [ ] Evitar SQL concatenado con input del usuario.
-- [ ] Mantener queries auditables y faciles de leer.
-- [ ] Separar SQL de la interpretacion del lenguaje natural.
-- [ ] Devolver estructuras limpias y consistentes hacia capas superiores.
-- [ ] Documentar el rango de datos disponible.
+- [x] Evitar SQL concatenado con input del usuario.
+- [x] Mantener queries auditables y faciles de leer.
+- [x] Separar SQL de la interpretacion del lenguaje natural.
+- [x] Devolver estructuras limpias y consistentes hacia capas superiores.
+- [x] Documentar el rango de datos disponible.
 
 ### Guardrails
 
-- [ ] No permitir escrituras en la base.
-- [ ] Limitar el acceso a la tabla necesaria.
-- [ ] Preparar el sistema para funcionar idealmente con usuario read-only.
+- [x] No permitir escrituras en la base.
+- [x] Limitar el acceso a la tabla necesaria.
+- [x] Preparar el sistema para funcionar idealmente con usuario read-only.
 
 ### Entregables
 
-- [ ] Conexion estable a MySQL.
-- [ ] Cobertura del dataset disponible desde la API.
-- [ ] Capa de datos base funcionando.
+- [x] Conexion estable a MySQL.
+- [x] Cobertura del dataset disponible desde la API.
+- [x] Capa de datos base funcionando.
 
 ---
 
@@ -746,7 +746,7 @@ Para reducir riesgo, conviene seguir este orden:
 
 - [x] Fase 0 - Preparacion inicial
 - [x] Fase 1 - FastAPI y base web
-- [ ] Fase 2 - MySQL y acceso a datos
+- [x] Fase 2 - MySQL y acceso a datos
 - [ ] Fase 3 - Tools analiticas
 - [ ] Fase 4 - Forecast
 - [ ] Fase 5 - Grafo LangGraph

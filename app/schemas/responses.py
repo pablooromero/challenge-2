@@ -49,9 +49,31 @@ class HealthResponse(BaseModel):
     app_name: str
     environment: str
     version: str
+    database_status: str
+    database_message: str | None = None
 
 
 class CoverageResponse(BaseModel):
     status: str
     message: str
     data_range: DataRange | None = None
+    record_count: int | None = None
+
+
+class KpiSummary(BaseModel):
+    total_leads: int
+    total_sales: int
+    total_revenue_usd: float
+    total_ad_cost_usd: float
+    total_clicks: int
+    total_impressions: int
+
+
+class AnalyticsSnapshot(BaseModel):
+    coverage: CoverageResponse
+    summary: KpiSummary
+
+
+class KpiResponse(BaseModel):
+    status: str
+    summary: KpiSummary

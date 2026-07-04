@@ -21,6 +21,33 @@ class ConfigurationError(AppError):
         )
 
 
+class DatabaseConfigurationError(AppError):
+    def __init__(self, message: str = "Database configuration is incomplete.") -> None:
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="database_configuration_error",
+        )
+
+
+class DatabaseConnectionError(AppError):
+    def __init__(self, message: str = "Database connection failed.") -> None:
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code="database_connection_error",
+        )
+
+
+class DatabaseQueryError(AppError):
+    def __init__(self, message: str = "Database query failed.") -> None:
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="database_query_error",
+        )
+
+
 async def app_error_handler(_: Request, exc: AppError) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,
