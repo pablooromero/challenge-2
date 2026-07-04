@@ -286,31 +286,31 @@ Agregar la capacidad de proyectar leads y ventas del proximo mes con una metodol
 
 ### Tareas
 
-- [ ] Crear modulo `forecast.py`.
-- [ ] Implementar agregacion mensual para series de leads y ventas.
-- [ ] Implementar deteccion de outliers.
-- [ ] Definir estrategia de atenuacion de outliers.
-- [ ] Implementar promedio movil ponderado.
-- [ ] Implementar ajuste estacional suave usando referencia anual cuando exista.
-- [ ] Generar salida del forecast con:
+- [x] Crear modulo `forecast.py`.
+- [x] Implementar agregacion mensual para series de leads y ventas.
+- [x] Implementar deteccion de outliers.
+- [x] Definir estrategia de atenuacion de outliers.
+- [x] Implementar promedio movil ponderado.
+- [x] Implementar ajuste estacional suave usando referencia anual cuando exista.
+- [x] Generar salida del forecast con:
   - valor proyectado
   - periodo objetivo
   - metodo utilizado
   - warnings
-- [ ] Validar comportamiento con meses atipicos.
-- [ ] Preparar texto tecnico resumido para explicar la metodologia.
+- [x] Validar comportamiento con meses atipicos.
+- [x] Preparar texto tecnico resumido para explicar la metodologia.
 
 ### Buenas practicas
 
-- [ ] Mantener el forecast deterministicamente reproducible.
-- [ ] No delegar el calculo del forecast al LLM.
-- [ ] Documentar limitaciones e incertidumbre.
-- [ ] Evitar sobreprometer precision estadistica.
+- [x] Mantener el forecast deterministicamente reproducible.
+- [x] No delegar el calculo del forecast al LLM.
+- [x] Documentar limitaciones e incertidumbre.
+- [x] Evitar sobreprometer precision estadistica.
 
 ### Entregables
 
-- [ ] Forecast funcional para leads y ventas.
-- [ ] Respuesta explicable para el requisito predictivo.
+- [x] Forecast funcional para leads y ventas.
+- [x] Respuesta explicable para el requisito predictivo.
 
 ---
 
@@ -748,7 +748,7 @@ Para reducir riesgo, conviene seguir este orden:
 - [x] Fase 1 - FastAPI y base web
 - [x] Fase 2 - MySQL y acceso a datos
 - [x] Fase 3 - Tools analiticas
-- [ ] Fase 4 - Forecast
+- [x] Fase 4 - Forecast
 - [ ] Fase 5 - Grafo LangGraph
 - [ ] Fase 6 - Integracion LLM
 - [ ] Fase 7 - Prompt management Langfuse

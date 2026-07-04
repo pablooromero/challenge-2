@@ -52,6 +52,11 @@ Dejar definida la base del proyecto para que el BI Assistant crezca de forma ord
 
 - devuelve un resumen agregado inicial de leads, ventas, ingresos, costo, clics e impresiones
 
+`GET /api/forecast`
+
+- devuelve la proyeccion deterministica del proximo mes para leads y ventas
+- incluye metodologia, warnings y trazabilidad del historico mensual
+
 ## Estrategia de logs y errores
 
 - Los errores tecnicos se registran en backend.
