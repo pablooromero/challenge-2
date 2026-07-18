@@ -21,6 +21,7 @@ PROMPT_SPECS: dict[str, PromptSpec] = {
                     "- forecast\n"
                     "- channel_breakdown\n"
                     "- vehicle_breakdown\n"
+                    "- flexible_metrics\n"
                     "- unsupported\n\n"
                     "Metricas permitidas:\n"
                     "- total_leads\n"
@@ -34,22 +35,37 @@ PROMPT_SPECS: dict[str, PromptSpec] = {
                     "- cpa\n"
                     "- roas\n"
                     "- conversion_rate\n\n"
-                    "Reglas:\n"
+                    "Dimensiones permitidas (solo para flexible_metrics):\n"
+                    "- none, month, vehicle_type, vehicle_model\n\n"
+                    "Reglas de intent:\n"
                     "- Si el usuario pide proyeccion o proximo mes, usar forecast.\n"
-                    "- Si pregunta por mejor o peor mes, usar temporal_analysis.\n"
-                    "- Si compara pocos leads con muchas ventas, usar relational_analysis.\n"
-                    "- Si pide por canal, usar channel_breakdown.\n"
-                    "- Si pide por vehiculo, modelo o tipo, usar vehicle_breakdown.\n"
-                    "- Si pide recomendaciones, estrategia, presupuesto, o algo fuera del dataset, usar unsupported.\n"
-                    "- Usa null cuando un campo no aplique.\n"
+                    "- Si pregunta por el mejor o peor mes de UNA metrica, usar temporal_analysis.\n"
+                    "- Usar relational_analysis SOLO cuando contraste explicitamente pocos de una "
+                    "metrica con muchos de otra (ej: 'pocos leads pero muchas ventas').\n"
+                    "- Si pide desglose por canal (Google/Meta), usar channel_breakdown.\n"
+                    "- Si pide ranking por vehiculo, modelo o tipo, usar vehicle_breakdown.\n"
+                    "- Si pide UNA metrica acumulada sin dimension, usar basic_kpi.\n"
+                    "- Usar flexible_metrics cuando pida VARIAS metricas juntas (ej: 'ventas y leads por mes'), "
+                    "o una metrica agrupada por mes/tipo/modelo que no encaje en los intents anteriores, o una "
+                    "combinacion libre de metricas con filtros. Completar metrics (lista) y dimension "
+                    "(month para 'por mes', vehicle_type para 'por tipo', vehicle_model para 'por modelo').\n"
+                    "- Si pide recomendaciones, estrategia, presupuesto, o algo fuera del dataset, usar unsupported.\n\n"
+                    "Extraccion de filtros (para cualquier intent):\n"
+                    "- start_date y end_date: completar SOLO si el usuario menciona un periodo explicito. "
+                    "Formato YYYY, YYYY-MM o YYYY-MM-DD (ej: 'marzo 2026' -> start_date 2026-03, end_date 2026-03; "
+                    "'en 2025' -> start_date 2025, end_date 2025). Si el periodo es relativo o no se menciona, dejar null.\n"
+                    "- vehicle_type / vehicle_model: completar solo si el usuario nombra un tipo o modelo concreto.\n\n"
+                    "Reglas generales:\n"
+                    "- Usa null cuando un campo no aplique y [] para metrics si no aplica.\n"
                     "- Usa el contexto conversacional solo para resolver follow-ups obvios.\n"
+                    "- No inventes periodos ni filtros que el usuario no haya pedido.\n"
                     "- Nunca salgas del enum ni agregues texto extra."
                 ),
             },
             {"role": "user", "content": "{{input_payload}}"},
         ],
         labels=PROMPT_LABELS,
-        commit_message="Bootstrap classifier prompt for BI assistant",
+        commit_message="Classifier prompt with flexible_metrics intent and filter extraction",
     ),
     "bi-assistant-answer-composer": PromptSpec(
         name="bi-assistant-answer-composer",

@@ -21,12 +21,33 @@ def plan_tools(state: AssistantState) -> dict[str, Any]:
         group_by = state.get("group_by") or "type_model"
         sort_by = state.get("sort_by") or "total_sales"
 
+        # Filtros extraidos por el clasificador; se propagan a las tools que los aceptan.
+        filter_args = {
+            key: state.get(key)
+            for key in ("start_date", "end_date", "vehicle_type", "vehicle_model")
+            if state.get(key)
+        }
+
         tool_name = "get_basic_kpis_tool"
         tool_args: dict[str, Any] = {}
         planning_reason = "intent_basic_kpi_maps_to_get_basic_kpis_tool"
         planning_details: dict[str, Any] = {"intent": intent, "metric": metric}
 
-        if intent == "temporal_analysis":
+        if intent == "flexible_metrics":
+            metrics = state.get("metrics") or [metric]
+            dimension = state.get("dimension") or "none"
+            sort_dir = state.get("sort_dir") or "desc"
+            tool_name = "query_metrics_tool"
+            tool_args = {
+                "metrics": metrics,
+                "dimension": dimension,
+                "sort_by": state.get("sort_by"),
+                "sort_dir": sort_dir,
+                "limit": 12,
+            }
+            planning_reason = "intent_flexible_metrics_maps_to_query_metrics_tool"
+            planning_details = {"intent": intent, "metrics": metrics, "dimension": dimension}
+        elif intent == "temporal_analysis":
             tool_name = "find_best_or_worst_period_tool"
             tool_args = {"metric": metric, "direction": rank_direction}
             planning_reason = "intent_temporal_analysis_maps_to_find_best_or_worst_period_tool"
@@ -72,6 +93,11 @@ def plan_tools(state: AssistantState) -> dict[str, Any]:
                 "error_reason": "unsupported_intent_cannot_be_executed",
                 "error_details": {"intent": intent},
             }
+
+        # Merge extracted filters into whatever args the intent already produced.
+        if filter_args:
+            tool_args = {**tool_args, **filter_args}
+            planning_details["filters"] = filter_args
 
         tool_call = {
             "name": tool_name,

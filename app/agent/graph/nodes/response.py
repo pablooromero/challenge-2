@@ -6,6 +6,7 @@ from langchain_core.messages import AIMessage, ToolMessage
 from app.agent.graph.state import AssistantState
 from app.agent.llm import compose_answer_with_llm
 from app.agent.prompting import compile_prompt
+from app.domain.analytics.flexible import DIMENSION_LABELS
 from app.observability import observation_context, update_current_span
 
 
@@ -21,6 +22,9 @@ def latest_tool_result(state: AssistantState) -> dict[str, Any] | None:
                 except json.JSONDecodeError:
                     return {"raw_content": content}
     return None
+
+
+RATIO_METRICS = frozenset({"ctr", "cpl", "cpa", "roas", "conversion_rate"})
 
 
 def metric_label(metric: str) -> str:
@@ -107,12 +111,22 @@ def build_deterministic_answer(state: AssistantState) -> dict[str, Any]:
 
     if intent == "basic_kpi":
         summary = tool_result["summary"]
-        metric_value = summary.get(metric, summary.get("total_sales"))
-        answer = (
-            f"Al ultimo dato disponible ({meta['data_range']['to']}), "
-            f"el valor acumulado de {metric_label(metric)} es {metric_value} desde "
-            f"{meta['data_range']['from']}."
-        )
+        if metric not in summary:
+            metric = "total_sales"
+        metric_value = summary[metric]
+        data_from = meta["data_range"]["from"]
+        data_to = meta["data_range"]["to"]
+        if metric in RATIO_METRICS:
+            answer = (
+                f"El {metric_label(metric)} para el periodo {data_from} a {data_to} "
+                f"es {metric_value}."
+            )
+        else:
+            answer = (
+                f"Al ultimo dato disponible ({data_to}), "
+                f"el valor acumulado de {metric_label(metric)} es {metric_value} desde "
+                f"{data_from}."
+            )
     elif intent == "temporal_analysis":
         row = tool_result.get("row")
         if row is None:
@@ -171,6 +185,32 @@ def build_deterministic_answer(state: AssistantState) -> dict[str, Any]:
         else:
             answer = "No encontre suficiente informacion por vehiculo para responder."
         last_metric = "total_sales"
+    elif intent == "flexible_metrics":
+        rows = tool_result.get("rows", [])
+        metrics = tool_result.get("metrics") or [metric]
+        dimension = tool_result.get("dimension", "none")
+        data_from = meta["data_range"]["from"]
+        data_to = meta["data_range"]["to"]
+        if not rows:
+            answer = "No encontre datos para esa combinacion de metricas y filtros."
+        elif dimension == "none":
+            row = rows[0]
+            parts = [f"{metric_label(name)}: {row.get(name)}" for name in metrics]
+            answer = f"Para el periodo {data_from} a {data_to}, {'; '.join(parts)}."
+        else:
+            sort_by = tool_result.get("sort_by") or metrics[0]
+            dim_label = DIMENSION_LABELS.get(dimension, dimension)
+            top_lines = []
+            for row in rows[:5]:
+                values = ", ".join(f"{metric_label(name)}: {row.get(name)}" for name in metrics)
+                top_lines.append(f"{row.get('dimension')} ({values})")
+            answer = (
+                f"Por {dim_label}, ordenado por {metric_label(sort_by)} ({data_from} a {data_to}). "
+                f"Top: {'; '.join(top_lines)}."
+            )
+            if len(rows) > 5:
+                answer += f" Se compararon {len(rows)} grupos en total."
+        last_metric = metrics[0]
     else:
         answer = "Todavia no puedo resolver esa consulta con el flujo actual."
 
@@ -267,6 +307,23 @@ def build_chart_payload(state: AssistantState) -> dict[str, Any]:
                 "labels": labels,
                 "datasets": [{"label": "Ventas", "data": [row["total_sales"] for row in rows]}],
             }
+        elif intent == "flexible_metrics":
+            rows = tool_result.get("rows", [])
+            dimension = tool_result.get("dimension", "none")
+            metrics = tool_result.get("metrics") or []
+            if dimension != "none" and rows and metrics:
+                chart_metrics = metrics[:2]
+                chart_payload = {
+                    "type": "bar",
+                    "labels": [str(row.get("dimension")) for row in rows],
+                    "datasets": [
+                        {
+                            "label": metric_label(name),
+                            "data": [row.get(name, 0) for row in rows],
+                        }
+                        for name in chart_metrics
+                    ],
+                }
         elif intent == "forecast":
             leads_history = tool_result["leads_projection"]["history"]
             sales_history = tool_result["sales_projection"]["history"]

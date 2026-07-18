@@ -11,6 +11,7 @@ SUPPORTED_INTENTS = (
     "forecast",
     "channel_breakdown",
     "vehicle_breakdown",
+    "flexible_metrics",
     "unsupported",
 )
 
@@ -21,6 +22,7 @@ AssistantIntent = Literal[
     "forecast",
     "channel_breakdown",
     "vehicle_breakdown",
+    "flexible_metrics",
     "unsupported",
 ]
 
@@ -36,6 +38,13 @@ class AssistantState(TypedDict, total=False):
     high_metric: str | None
     group_by: str | None
     sort_by: str | None
+    sort_dir: Literal["asc", "desc"] | None
+    metrics: list[str] | None
+    dimension: str | None
+    start_date: str | None
+    end_date: str | None
+    vehicle_type: str | None
+    vehicle_model: str | None
     tool_name: str | None
     tool_args: dict[str, Any]
     tool_result: dict[str, Any] | None

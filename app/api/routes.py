@@ -13,27 +13,30 @@ from app.services.health import build_health_response
 router = APIRouter(prefix="/api", tags=["api"])
 
 
+# NOTE: estos handlers son sincronos a proposito. El pipeline hace I/O bloqueante
+# (PyMySQL + cliente OpenAI sync), por lo que declararlos `def` hace que FastAPI los
+# ejecute en su threadpool y no bloqueen el event loop ni serialicen las requests.
 @router.get("/health", response_model=HealthResponse)
-async def get_health() -> HealthResponse:
+def get_health() -> HealthResponse:
     return build_health_response()
 
 
 @router.get("/coverage", response_model=CoverageResponse)
-async def get_coverage() -> CoverageResponse:
+def get_coverage() -> CoverageResponse:
     return build_coverage_response()
 
 
 @router.get("/kpis", response_model=KpiResponse)
-async def get_kpis() -> KpiResponse:
+def get_kpis() -> KpiResponse:
     result: KpiToolResult = get_basic_kpis()
     return KpiResponse(status="ok", summary=result.summary)
 
 
 @router.get("/forecast", response_model=ForecastResult)
-async def get_forecast() -> ForecastResult:
+def get_forecast() -> ForecastResult:
     return forecast_next_month()
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def post_chat(payload: ChatRequest) -> ChatResponse:
+def post_chat(payload: ChatRequest) -> ChatResponse:
     return build_chat_response(payload.message, payload.thread_id)

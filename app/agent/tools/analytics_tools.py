@@ -8,11 +8,18 @@ from app.domain.analytics.breakdowns import (
     get_monthly_aggregates,
     get_vehicle_breakdown,
 )
+from app.domain.analytics.flexible import run_metric_query
 from app.domain.analytics.kpis import get_basic_kpis
 from app.domain.analytics.ranking import find_best_or_worst_period
 from app.domain.analytics.relational import find_relational_pattern
 from app.observability import observation_context, update_current_span
-from app.schemas.analytics import MetricName, SortField, VehicleGroupBy
+from app.schemas.analytics import (
+    FlexibleDimension,
+    MetricName,
+    SortDirection,
+    SortField,
+    VehicleGroupBy,
+)
 
 
 class AnalyticsFilterInput(BaseModel):
@@ -32,6 +39,24 @@ class VehicleBreakdownInput(AnalyticsFilterInput):
         description="Metric used to sort the vehicle breakdown rows.",
     )
     limit: int = Field(default=10, ge=1, le=50, description="Maximum number of rows to return.")
+
+
+class FlexibleMetricsInput(AnalyticsFilterInput):
+    metrics: list[MetricName] = Field(
+        default_factory=lambda: ["total_sales"],
+        description="One or more metrics to aggregate, from the allowed metric set.",
+        min_length=1,
+    )
+    dimension: FlexibleDimension = Field(
+        default="none",
+        description="Optional grouping dimension: none, month, vehicle_type or vehicle_model.",
+    )
+    sort_by: MetricName | None = Field(
+        default=None,
+        description="Metric used to sort grouped rows. Defaults to the first requested metric.",
+    )
+    sort_dir: SortDirection = Field(default="desc", description="Sort direction for grouped rows.")
+    limit: int = Field(default=12, ge=1, le=100, description="Maximum number of grouped rows.")
 
 
 class PeriodRankingInput(AnalyticsFilterInput):
@@ -149,6 +174,39 @@ def get_vehicle_breakdown_tool(
         return result.model_dump(by_alias=True)
 
 
+@tool(args_schema=FlexibleMetricsInput)
+def query_metrics_tool(
+    metrics: list[MetricName] | None = None,
+    dimension: FlexibleDimension = "none",
+    sort_by: MetricName | None = None,
+    sort_dir: SortDirection = "desc",
+    limit: int = 12,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    vehicle_type: str | None = None,
+    vehicle_model: str | None = None,
+) -> dict:
+    """Aggregate one or more allowed metrics, optionally grouped by month or vehicle, with filters."""
+    with observation_context(
+        "assistant.tool.query_metrics",
+        as_type="tool",
+        input={"metrics": metrics, "dimension": dimension, "sort_by": sort_by},
+    ):
+        result = run_metric_query(
+            metrics=metrics or ["total_sales"],
+            dimension=dimension,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            limit=limit,
+            start_date=start_date,
+            end_date=end_date,
+            vehicle_type=vehicle_type,
+            vehicle_model=vehicle_model,
+        )
+        update_current_span(output={"row_count": len(result.rows), "dimension": result.dimension})
+        return result.model_dump(by_alias=True)
+
+
 @tool(args_schema=PeriodRankingInput)
 def find_best_or_worst_period_tool(
     metric: MetricName,
@@ -211,4 +269,5 @@ def get_analytics_tools() -> list:
         get_vehicle_breakdown_tool,
         find_best_or_worst_period_tool,
         find_relational_pattern_tool,
+        query_metrics_tool,
     ]

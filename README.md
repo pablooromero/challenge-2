@@ -46,11 +46,18 @@ La prioridad del enfoque es combinar:
 El asistente puede responder:
 
 - ventas, leads, ingresos, costo publicitario, clics e impresiones acumuladas
+- ratios agregados como ROAS, CTR, CPA, CPL y tasa de conversion
 - mejor o peor mes para una metrica soportada
 - patrones relacionales como "pocos leads y muchas ventas"
 - breakdown por canal
 - breakdown por vehiculo, tipo o modelo
 - forecast del proximo mes para leads y ventas
+- consultas flexibles con varias metricas y agrupacion por mes, tipo o modelo
+- filtros por periodo (ej. "en marzo 2026", "en 2025") y por tipo/modelo de vehiculo
+
+Las consultas flexibles se resuelven con un contrato tipado (metricas + dimension +
+filtros) que un compilador deterministico traduce a SQL parametrizado sobre una
+allowlist. El LLM nunca escribe SQL: es un semantic layer minimalista.
 
 Tambien expone:
 
@@ -141,6 +148,12 @@ Para sincronizar los prompts locales hacia Langfuse:
 ```bash
 python scripts/sync_langfuse_prompts.py
 ```
+
+IMPORTANTE: el runtime resuelve los prompts desde Langfuse usando el label
+`production`. Si un prompt existe en Langfuse, esa version tiene prioridad sobre el
+catalogo local. Por lo tanto, cualquier cambio en `catalog.py` (por ejemplo, nuevas
+capacidades del clasificador) solo se activa en la app desplegada despues de correr
+el script de sync, que crea una nueva version y la publica con el label `production`.
 
 ## Observabilidad con Langfuse
 
@@ -268,6 +281,15 @@ Cobertura actual:
 - razones de clasificacion
 - razones de planning
 - comportamiento de intents bloqueados
+- normalizacion de filtros de fecha
+- validacion y ranking del compilador de consultas flexibles
+
+Para un ensayo rapido contra la base real (sin costo de LLM), que valida las
+respuestas deterministicas de las consultas clave de la demo:
+
+```bash
+python scripts/smoke_queries.py
+```
 
 ## Deploy en Render
 
@@ -323,11 +345,20 @@ Render puede dormir el servicio gratuito tras un periodo sin trafico. Para una d
 - `Cual es la cantidad de leads y ventas proyectadas del proximo mes?`
 - `Mostrame el rendimiento por canal`
 - `Cual fue el mejor modelo por ventas?`
+- `Cual es el ROAS acumulado?`
+- `Cuantas ventas hubo en marzo 2026?`
+- `Comparame ventas y leads por mes en 2025`
+- `Mostrame ingresos y ROAS por tipo de vehiculo`
 
 ## Limitaciones actuales
 
-- el dominio es cerrado a las tools implementadas
-- no hay SQL libre generado por el LLM
+- el dominio es cerrado a las tools implementadas (por diseno de seguridad)
+- no hay SQL libre generado por el LLM; las consultas flexibles pasan por un
+  compilador deterministico sobre una allowlist
+- los filtros temporales aceptan periodos explicitos (ano, mes, fecha); los periodos
+  relativos ("ultimo mes") todavia no se resuelven automaticamente
+- la dimension `channel` no esta disponible en el tool flexible (se cubre con el
+  tool dedicado de canal)
 - la memoria es de corto plazo por `thread_id`
 - el forecast es deterministico y simple, pensado para demo y explicabilidad
 - el checkpointer actual es `InMemorySaver`, no persistente entre reinicios

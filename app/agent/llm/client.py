@@ -166,7 +166,7 @@ def compose_answer_with_llm(
                     text_format=FinalAnswerOutput,
                     text={"verbosity": "medium"},
                     temperature=0.2,
-                    max_output_tokens=220,
+                    max_output_tokens=450,
                     store=False,
                     safety_identifier=_safe_thread_identifier(thread_id),
                     name="assistant.llm.answer_composer",

@@ -1,7 +1,15 @@
 import logging
 
 from app.domain.analytics.filters import build_where_clause
-from app.domain.analytics.helpers import to_float, to_int
+from app.domain.analytics.helpers import (
+    calculate_conversion_rate,
+    calculate_cpa,
+    calculate_cpl,
+    calculate_ctr,
+    calculate_roas,
+    to_float,
+    to_int,
+)
 from app.domain.analytics.meta import build_meta
 from app.repositories.metrics_repository import fetch_basic_kpis
 from app.schemas.analytics import KpiToolResult
@@ -24,13 +32,24 @@ def query_basic_kpis_summary(
     )
     logger.info("Running basic KPI aggregate query.")
     row = fetch_basic_kpis(where_clause, params)
+    total_leads = to_int(row.get("total_leads"))
+    total_sales = to_int(row.get("total_sales"))
+    total_revenue_usd = to_float(row.get("total_revenue_usd"))
+    total_ad_cost_usd = to_float(row.get("total_ad_cost_usd"))
+    total_clicks = to_int(row.get("total_clicks"))
+    total_impressions = to_int(row.get("total_impressions"))
     return KpiSummary(
-        total_leads=to_int(row.get("total_leads")),
-        total_sales=to_int(row.get("total_sales")),
-        total_revenue_usd=to_float(row.get("total_revenue_usd")),
-        total_ad_cost_usd=to_float(row.get("total_ad_cost_usd")),
-        total_clicks=to_int(row.get("total_clicks")),
-        total_impressions=to_int(row.get("total_impressions")),
+        total_leads=total_leads,
+        total_sales=total_sales,
+        total_revenue_usd=total_revenue_usd,
+        total_ad_cost_usd=total_ad_cost_usd,
+        total_clicks=total_clicks,
+        total_impressions=total_impressions,
+        ctr=calculate_ctr(total_clicks, total_impressions),
+        cpl=calculate_cpl(total_ad_cost_usd, total_leads),
+        cpa=calculate_cpa(total_ad_cost_usd, total_sales),
+        roas=calculate_roas(total_revenue_usd, total_ad_cost_usd),
+        conversion_rate=calculate_conversion_rate(total_sales, total_leads),
     )
 
 

@@ -40,4 +40,19 @@ def normalize_input(state: AssistantState) -> dict[str, Any]:
             "planning_details": {},
             "thread_id": state.get("thread_id"),
             "prompt_versions": {},
+            # Reset per-turn extracted fields so stale filters from a previous
+            # turn (kept by the checkpointer) never leak into a new question.
+            "metric": None,
+            "rank_direction": None,
+            "low_metric": None,
+            "high_metric": None,
+            "group_by": None,
+            "sort_by": None,
+            "sort_dir": None,
+            "metrics": None,
+            "dimension": None,
+            "start_date": None,
+            "end_date": None,
+            "vehicle_type": None,
+            "vehicle_model": None,
         }

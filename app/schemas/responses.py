@@ -86,6 +86,12 @@ class KpiSummary(BaseModel):
     total_ad_cost_usd: float
     total_clicks: int
     total_impressions: int
+    # Ratios derivados calculados sobre los agregados (0.0 si el denominador es 0).
+    ctr: float = 0.0
+    cpl: float = 0.0
+    cpa: float = 0.0
+    roas: float = 0.0
+    conversion_rate: float = 0.0
 
 
 class AnalyticsSnapshot(BaseModel):

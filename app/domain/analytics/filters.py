@@ -1,17 +1,44 @@
+import calendar
+import re
 from datetime import date
-from typing import Any
+from typing import Any, Literal
 
 from app.core.errors import AnalyticsValidationError
 
+_YEAR_RE = re.compile(r"^\d{4}$")
+_MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 
-def normalize_date(value: str | None, field_name: str) -> str | None:
+
+def normalize_date(
+    value: str | None,
+    field_name: str,
+    boundary: Literal["start", "end"] = "start",
+) -> str | None:
+    """Normalize a date filter into an ISO YYYY-MM-DD string.
+
+    Accepts full dates (YYYY-MM-DD), months (YYYY-MM) and years (YYYY). For the
+    coarser granularities the value is expanded to the first/last day of the
+    period depending on `boundary`, so the LLM can emit a period without having
+    to compute exact day boundaries.
+    """
     if value is None:
         return None
+
+    value = value.strip()
     try:
+        if _YEAR_RE.match(value):
+            year = int(value)
+            return date(year, 1, 1).isoformat() if boundary == "start" else date(year, 12, 31).isoformat()
+        if _MONTH_RE.match(value):
+            year, month = (int(part) for part in value.split("-"))
+            if boundary == "start":
+                return date(year, month, 1).isoformat()
+            last_day = calendar.monthrange(year, month)[1]
+            return date(year, month, last_day).isoformat()
         return date.fromisoformat(value).isoformat()
-    except ValueError as exc:
+    except (ValueError, IndexError) as exc:
         raise AnalyticsValidationError(
-            f"Invalid {field_name}. Expected ISO date format YYYY-MM-DD."
+            f"Invalid {field_name}. Expected YYYY, YYYY-MM or YYYY-MM-DD."
         ) from exc
 
 
@@ -27,8 +54,8 @@ def build_where_clause(
     vehicle_type: str | None = None,
     vehicle_model: str | None = None,
 ) -> tuple[str, tuple[Any, ...], dict[str, str]]:
-    normalized_start = normalize_date(start_date, "start_date")
-    normalized_end = normalize_date(end_date, "end_date")
+    normalized_start = normalize_date(start_date, "start_date", "start")
+    normalized_end = normalize_date(end_date, "end_date", "end")
     if normalized_start and normalized_end and normalized_start > normalized_end:
         raise AnalyticsValidationError("start_date must be earlier than or equal to end_date.")
 

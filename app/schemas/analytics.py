@@ -28,6 +28,8 @@ SortField = Literal[
 
 VehicleGroupBy = Literal["type", "model", "type_model"]
 RankDirection = Literal["max", "min"]
+FlexibleDimension = Literal["none", "month", "vehicle_type", "vehicle_model"]
+SortDirection = Literal["asc", "desc"]
 
 
 class AnalyticsMeta(BaseModel):
@@ -114,3 +116,27 @@ class RelationalPatternResult(BaseModel):
     high_metric_rank: int | None = None
     combined_rank_score: int | None = None
     explanation: str
+
+
+class FlexibleQueryRow(BaseModel):
+    dimension: str | None = None
+    total_leads: int
+    total_sales: int
+    total_revenue_usd: float
+    total_ad_cost_usd: float
+    total_clicks: int
+    total_impressions: int
+    ctr: float
+    cpl: float
+    cpa: float
+    roas: float
+    conversion_rate: float
+
+
+class FlexibleQueryResult(BaseModel):
+    meta: AnalyticsMeta
+    dimension: FlexibleDimension
+    metrics: list[MetricName] = Field(default_factory=list)
+    sort_by: MetricName | None = None
+    sort_dir: SortDirection = "desc"
+    rows: list[FlexibleQueryRow] = Field(default_factory=list)
