@@ -244,7 +244,7 @@ Usar [.env.example](.env.example) como base:
 cp .env.example .env
 ```
 
-Variables importantes:
+Variables criticas (minimo para levantar la app):
 
 - `OPENAI_API_KEY`
 - `MYSQL_HOST`
@@ -254,6 +254,11 @@ Variables importantes:
 - `LANGFUSE_PUBLIC_KEY`
 - `LANGFUSE_SECRET_KEY`
 - `LANGFUSE_HOST`
+
+El set completo (25 variables, incluye `OPENAI_MODEL`, timeouts de OpenAI y MySQL,
+`MYSQL_TABLE`, `APP_*`, `LANGFUSE_PROMPT_LABEL`, `LANGFUSE_PROMPT_CACHE_TTL_SECONDS`,
+etc.) esta documentado con valores por defecto en [.env.example](.env.example). Si el
+LLM o Langfuse no estan configurados, la app degrada a fallbacks deterministicos.
 
 ### 4. Levantar la app
 
@@ -275,7 +280,7 @@ El proyecto incluye tests focalizados sobre decisiones del agente:
 python -m unittest discover -s tests -v
 ```
 
-Cobertura actual:
+Cobertura actual (22 tests unitarios sobre decisiones del agente):
 
 - guardrails
 - razones de clasificacion
@@ -283,6 +288,11 @@ Cobertura actual:
 - comportamiento de intents bloqueados
 - normalizacion de filtros de fecha
 - validacion y ranking del compilador de consultas flexibles
+
+Alcance: los tests apuntan a las decisiones deterministicas del agente (clasificacion
+por reglas, planning, guardrails y compilador flexible). Todavia no hay un test
+end-to-end del grafo completo ni un harness de evaluaciones (evals) sobre la
+clasificacion LLM; ambos figuran en Proximos pasos.
 
 Para un ensayo rapido contra la base real (sin costo de LLM), que valida las
 respuestas deterministicas de las consultas clave de la demo:
